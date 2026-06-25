@@ -1,4 +1,5 @@
 import { runRoute } from '@/lib/express-adapter';
+import { verifyToken } from '@/middleware/auth.middleware';
 import { uploadAny, convertMultipleToWebP } from '@/lib/upload';
 import { getOffer, updateOffer, deleteOffer } from '@/controllers/offer.controller.js';
 
@@ -18,5 +19,5 @@ export async function PUT(req, ctx) {
 }
 
 export async function DELETE(req, ctx) {
-  return runRoute(req, await aliasedCtx(ctx), deleteOffer);
+  return runRoute(req, await aliasedCtx(ctx), verifyToken, deleteOffer);
 }

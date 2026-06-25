@@ -1,4 +1,5 @@
 import { runRoute } from '@/lib/express-adapter';
+import { verifyToken } from '@/middleware/auth.middleware';
 import { uploadAny, convertMultipleToWebP } from '@/lib/upload';
 import { getPackage, updatePackage, deletePackage } from '@/controllers/package.controller.js';
 
@@ -19,5 +20,5 @@ export async function PUT(req, ctx) {
 }
 
 export async function DELETE(req, ctx) {
-  return runRoute(req, await aliasedCtx(ctx), deletePackage);
+  return runRoute(req, await aliasedCtx(ctx), verifyToken, deletePackage);
 }
