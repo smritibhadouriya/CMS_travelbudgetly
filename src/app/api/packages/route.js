@@ -1,4 +1,5 @@
 import { runRoute } from '@/lib/express-adapter';
+import { verifyToken } from '@/middleware/auth.middleware';
 import { uploadAny, convertMultipleToWebP } from '@/lib/upload';
 import { getPackages, createPackage } from '@/controllers/package.controller.js';
 
@@ -7,5 +8,5 @@ export async function GET(req, ctx) {
 }
 
 export async function POST(req, ctx) {
-  return runRoute(req, ctx, uploadAny(), convertMultipleToWebP, createPackage);
+  return runRoute(req, ctx, verifyToken, uploadAny(), convertMultipleToWebP, createPackage);
 }

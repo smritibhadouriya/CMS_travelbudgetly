@@ -16,7 +16,7 @@ export async function GET(req, ctx) {
 }
 
 export async function PUT(req, ctx) {
-  return runRoute(req, await aliasedCtx(ctx), uploadAny(), convertMultipleToWebP, updatePackage);
+  return runRoute(req, await aliasedCtx(ctx), verifyToken, uploadAny(), convertMultipleToWebP, updatePackage);
 }
 
 export async function DELETE(req, ctx) {

@@ -8,7 +8,7 @@ export async function GET(req, ctx) {
 }
 
 export async function PUT(req, ctx) {
-  return runRoute(req, ctx, uploadSingle('imageFile'), convertToWebP, updateAuthor);
+  return runRoute(req, ctx, verifyToken, uploadSingle('imageFile'), convertToWebP, updateAuthor);
 }
 
 export async function DELETE(req, ctx) {

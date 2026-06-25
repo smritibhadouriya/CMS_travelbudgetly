@@ -1,4 +1,5 @@
 import { runRoute } from '@/lib/express-adapter';
+import { verifyToken } from '@/middleware/auth.middleware';
 import { getRedirects, createRedirect } from '@/controllers/redirect.controller.js';
 
 export async function GET(req, ctx) {
@@ -6,5 +7,5 @@ export async function GET(req, ctx) {
 }
 
 export async function POST(req, ctx) {
-  return runRoute(req, ctx, createRedirect);
+  return runRoute(req, ctx, verifyToken, createRedirect);
 }

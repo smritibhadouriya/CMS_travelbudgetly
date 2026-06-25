@@ -8,7 +8,7 @@ export async function GET(req, ctx) {
 }
 
 export async function PUT(req, ctx) {
-  return runRoute(req, ctx, uploadAny(), convertMultipleToWebP, updateBlog);
+  return runRoute(req, ctx, verifyToken, uploadAny(), convertMultipleToWebP, updateBlog);
 }
 
 export async function DELETE(req, ctx) {
