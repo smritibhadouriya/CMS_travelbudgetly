@@ -1,3 +1,4 @@
+'use client';
 // // components/IconPicker.jsx
 // import React from "react";
 // import * as FaIcons from "react-icons/fa";

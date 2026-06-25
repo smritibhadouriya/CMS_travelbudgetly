@@ -1,3 +1,4 @@
+'use client';
 // admin/components/common/ui.jsx
 // Base atoms: Field, Input, Textarea, HeadingSelect, Toggle, VisBadge, SectionCard
 import { useState } from "react";

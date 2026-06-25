@@ -28,6 +28,17 @@ const login = async (req, res) => {
       { expiresIn: '1d' }
     );
 
+    // Save the JWT as an httpOnly cookie so protected API routes can read it
+    // (see auth.middleware.js -> req.cookies.token). httpOnly keeps it out of
+    // JS/XSS; Secure is enabled in production (HTTPS).
+    res.cookie('token', token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000, // 1 day — matches the JWT expiry
+    });
+
     res.json({ token });
   } catch (err) {
     console.error('LOGIN ERROR:', err);

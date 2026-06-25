@@ -1,4 +1,4 @@
-'use client';
+
 import OfferAdmin from '@/screens/PagesContent/OfferAdmin.jsx';
 import config from '@/lib/panel-config';
 

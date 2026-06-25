@@ -1,4 +1,4 @@
-'use client';
+
 import PackageTableView from '@/screens/PagesContent/PackageTableView.jsx';
 import config from '@/lib/panel-config';
 

@@ -1,3 +1,4 @@
+'use client';
 import { useEffect, useRef, useState } from 'react';
 import { FiChevronDown, FiLogOut, FiTrash2 } from 'react-icons/fi';
 import { useLocation, useNavigate } from '@/lib/nav';
@@ -31,7 +32,13 @@ export default function Header({ config }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+  try {
+    // Ask the server to delete the httpOnly token cookie.
+    await axios.post(`${VITE_BACKEND_URL}/auth/logout`, {}, { withCredentials: true });
+  } catch (err) {
+    console.error("Logout request failed:", err);
+  }
   localStorage.removeItem("token");
   localStorage.removeItem("userEmail");
   navigate("/login", { replace: true });

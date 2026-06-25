@@ -3,7 +3,8 @@ const VITE_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api";
 
 const BASE = VITE_BACKEND_URL.replace(/\/$/, "");
 
-const api = axios.create({ baseURL: BASE, timeout: 60_000 });
+// withCredentials so the httpOnly `token` cookie is sent on every API request.
+const api = axios.create({ baseURL: BASE, timeout: 60_000, withCredentials: true });
 
 api.interceptors.response.use(
   (res) => res,

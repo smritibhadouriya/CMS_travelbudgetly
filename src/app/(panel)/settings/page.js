@@ -1,4 +1,4 @@
-'use client';
+
 import SettingsAdmin from '@/screens/PagesContent/SettingsAdmin.jsx';
 import config from '@/lib/panel-config';
 

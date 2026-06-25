@@ -3,21 +3,27 @@
 
 
 // admin/src/pages/AddBlogPage.jsx
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useParams, useNavigate } from "@/lib/nav";
 import { toast } from "react-toastify";
 import { getBlog, createBlog, updateBlog, getAuthors } from "../../service/api";
 import { SectionCard, ImagePicker } from "../../components/CommonUI/FormComponents";
 import { SeoSection } from "../../components/CommonUI/Sections.jsx";
 
-const SNOTE_CSS = `
-  @import url('https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.20/summernote-bs4.min.css');
-  .note-editor{border-radius:.5rem!important;border:1px solid #e5e7eb!important}
-  .note-toolbar{background:#f9fafb!important;border-bottom:1px solid #e5e7eb!important;padding:6px 8px!important}
-  .note-btn{background:white!important;border:1px solid #e5e7eb!important;color:#374151!important;padding:3px 9px!important;margin:1px!important;border-radius:4px!important;font-size:12px!important}
-  .note-btn:hover{background:#f3f4f6!important}
-  .note-editable{padding:16px!important;min-height:460px!important;background:white!important;color:#111827!important;font-size:15px!important;line-height:1.7!important}
-`;
+// CKEditor touches `document` at import time, so load it client-only (no SSR).
+const RichTextEditor = dynamic(
+  () => import("../../components/CommonUI/RichTextEditor"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center gap-2 p-4 text-xs text-gray-400">
+        <div className="animate-spin h-3 w-3 rounded-full border-b-2 border-indigo-400" />
+        Loading editor...
+      </div>
+    ),
+  }
+);
 
 const blankImg = () => ({ url: "", file: null, _preview: null, alt: "", title: "" });
 
@@ -172,10 +178,10 @@ const Section = ({ title, defaultOpen = true, children }) => {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {/* 
-        KEY FIX: Always render children (never unmount), just hide visually.
-        This prevents Summernote from losing its DOM node when section is collapsed.
-        visibility:hidden + height:0 keeps node in DOM but invisible.
+      {/*
+        Always render children (never unmount), just hide visually. This keeps
+        the CKEditor instance alive when its section is collapsed.
+        visibility:hidden + height:0 keeps the node in the DOM but invisible.
       */}
       <div
         style={{
@@ -201,17 +207,11 @@ export default function AddBlogPage() {
   const navigate = useNavigate();
   const isEdit   = Boolean(id) && id !== "new";
 
-  const editorRef      = useRef(null);
-  const editorInit     = useRef(false);
-  const pendingHtml    = useRef("");
-  const contentOpen    = useRef(true); // track content section open state
-
   const [data, setData]                     = useState(blank());
   const [authors, setAuthors]               = useState([]);
   const [authorsLoading, setAuthorsLoading] = useState(true);
   const [saving, setSaving]                 = useState(false);
   const [pageLoading, setPageLoading]       = useState(isEdit);
-  const [editorReady, setEditorReady]       = useState(false);
 
   /* ── Load Authors ── */
   useEffect(() => {
@@ -239,7 +239,6 @@ export default function AddBlogPage() {
         if (cancelled) return;
         const blog = r?.data?.data || r?.data?.blog || r?.data;
         if (!blog) { toast.error("Blog not found"); return; }
-        pendingHtml.current = blog.content || "";
         setData(mapBlog(blog));
       } catch {
         if (!cancelled) toast.error("Failed to load blog");
@@ -250,158 +249,7 @@ export default function AddBlogPage() {
     return () => { cancelled = true; };
   }, [id, isEdit]);
 
-  /* ── Load Summernote scripts ── */
-  useEffect(() => {
-    const style = document.createElement("style");
-    style.textContent = SNOTE_CSS;
-    document.head.appendChild(style);
-
-    const load = (src) => new Promise((res) => {
-      if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
-      const s  = document.createElement("script");
-      s.src    = src;
-      s.onload = res;
-      document.body.appendChild(s);
-    });
-
-    (async () => {
-      if (!window.jQuery) await load("https://code.jquery.com/jquery-3.6.0.min.js");
-      if (!window.jQuery?.fn?.summernote)
-        await load("https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.20/summernote-bs4.min.js");
-      setEditorReady(true);
-    })();
-
-    return () => {
-      if (editorRef.current && window.jQuery && editorInit.current) {
-        try { window.jQuery(editorRef.current).summernote("destroy"); } catch (_) {}
-      }
-      editorInit.current = false;
-    };
-  }, []);
-
-  /* ── initEditor — stable callback so we can call it from multiple places ── */
-  const initEditor = useCallback(() => {
-    if (!editorRef.current || !window.jQuery || editorInit.current) return;
-    const $ = window.jQuery;
-    const $el = $(editorRef.current);
-
-    // Destroy stale instance if any
-    try { if ($el.data("summernote")) $el.summernote("destroy"); } catch (_) {}
-
-    $el.summernote({
-      height: 460,
-      focus:  false,
-      dialogsInBody: true,
-      dialogsFade:   true,
-      placeholder: "Write your blog content here...",
-      fontNames: ["Arial","Georgia","Times New Roman","Courier New","Verdana","Trebuchet MS","Impact","Comic Sans MS","Tahoma","Helvetica"],
-      fontNamesIgnoreCheck: ["Arial","Georgia","Times New Roman","Courier New","Verdana","Trebuchet MS","Impact","Comic Sans MS","Tahoma","Helvetica"],
-      toolbar: [
-        ["style",   ["style"]],
-        ["font",    ["bold","italic","underline","clear"]],
-        ["fontname",["fontname"]],
-        ["size",    ["fontsize"]],
-        ["color",   ["color"]],
-        ["para",    ["ul","ol","paragraph"]],
-        ["table",   ["table"]],
-        ["insert",  ["link","picture","hr"]],
-        ["view",    ["fullscreen","codeview"]],
-      ],
-      callbacks: {
-        onInit() {
-          editorInit.current = true;
-          // Restore saved content
-          if (pendingHtml.current) {
-            setTimeout(() => {
-              try { $el.summernote("code", pendingHtml.current); } catch (_) {}
-            }, 50);
-          }
-        },
-        onChange(html) {
-          pendingHtml.current = html;
-          setData(p => ({ ...p, content: html }));
-        },
-      },
-    });
-  }, []);
-
-  /* ── Init Summernote once scripts + data ready ── */
-  useEffect(() => {
-    if (!editorReady || pageLoading) return;
-    // Small delay so DOM is fully painted
-    const t = setTimeout(() => initEditor(), 200);
-    return () => clearTimeout(t);
-  }, [editorReady, pageLoading, initEditor]);
-
-  /* ─────────────────────────────────────────────────────────────
-     KEY FIX: Watch editor container visibility with IntersectionObserver.
-     When the Content section is collapsed (visibility:hidden), the editor
-     loses layout. When it becomes visible again, we check if Summernote
-     lost its toolbar and re-init if needed.
-  ───────────────────────────────────────────────────────────── */
-  useEffect(() => {
-    if (!editorRef.current || !editorReady) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            // Section became visible — check if editor toolbar exists
-            const toolbarExists = editorRef.current
-              ?.closest('.note-editor') !== null ||
-              editorRef.current
-              ?.nextElementSibling?.classList?.contains('note-editor');
-
-            // If Summernote toolbar is missing, re-initialize
-            const noteEditorEl = editorRef.current?.parentElement?.querySelector('.note-editor');
-            if (!noteEditorEl && editorReady && !pageLoading) {
-              editorInit.current = false;
-              setTimeout(() => initEditor(), 100);
-            }
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(editorRef.current);
-    return () => observer.disconnect();
-  }, [editorReady, pageLoading, initEditor]);
-
-  /* ─────────────────────────────────────────────────────────────
-     SIMPLER BACKUP FIX: Also use MutationObserver on the editor
-     container — if .note-editor child is removed (collapsed section
-     caused re-render), re-init.
-  ───────────────────────────────────────────────────────────── */
-  useEffect(() => {
-    if (!editorRef.current || !editorReady) return;
-
-    const container = editorRef.current.parentElement;
-    if (!container) return;
-
-    const mutationObs = new MutationObserver(() => {
-      // If editor was previously initialized but note-editor div is gone
-      if (editorInit.current) {
-        const noteEditor = container.querySelector('.note-editor');
-        if (!noteEditor && editorRef.current) {
-          editorInit.current = false;
-          setTimeout(() => initEditor(), 150);
-        }
-      }
-    });
-
-    mutationObs.observe(container, { childList: true, subtree: false });
-    return () => mutationObs.disconnect();
-  }, [editorReady, initEditor]);
-
   const set = (k, v) => setData(p => ({ ...p, [k]: v }));
-
-  const getContent = () => {
-    if (editorInit.current && editorRef.current && window.jQuery) {
-      try { return window.jQuery(editorRef.current).summernote("code"); } catch (_) {}
-    }
-    return pendingHtml.current;
-  };
 
   /* ── Tag helpers ── */
   const addTag = () => {
@@ -438,7 +286,7 @@ export default function AddBlogPage() {
     if (!validate()) return;
     setSaving(true);
     try {
-      const fd = buildFd(data, getContent());
+      const fd = buildFd(data, data.content);
       if (isEdit) await updateBlog(id, fd);
       else        await createBlog(fd);
       toast.success(`Blog ${isEdit ? "updated" : "created"} successfully!`);
@@ -650,29 +498,20 @@ export default function AddBlogPage() {
           </p>
         </Section>
 
-        {/* ── Content — NOTE: editorRef lives here, Section keeps DOM alive ── */}
+        {/* ── Content — CKEditor lives here; Section keeps its DOM alive ── */}
         <Section title="📝 Content" defaultOpen={true}>
           <p className="text-xs text-gray-400 mb-3">
             💡 SEO friendly content.{" "}
             <strong className="text-amber-600">Images in content should be under 5 MB.</strong>
           </p>
           {/*
-            IMPORTANT: editorRef is attached here.
-            The Section component uses visibility:hidden (NOT display:none)
-            so this DOM node is NEVER removed from the tree.
-            Summernote stays alive even when section is collapsed.
+            The Section uses visibility:hidden (NOT display:none), so the
+            CKEditor instance is never unmounted when the section collapses.
           */}
-          <div
-            ref={editorRef}
-            className="border border-gray-200 rounded-xl bg-white"
-            style={{ minHeight: "460px" }}
+          <RichTextEditor
+            value={data.content}
+            onChange={(html) => set("content", html)}
           />
-          {!editorReady && (
-            <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-              <div className="animate-spin h-3 w-3 rounded-full border-b-2 border-indigo-400" />
-              Loading editor...
-            </div>
-          )}
         </Section>
 
         {/* ── SEO ── */}

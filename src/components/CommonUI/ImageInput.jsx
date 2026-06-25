@@ -1,3 +1,4 @@
+'use client';
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 const VITE_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api";

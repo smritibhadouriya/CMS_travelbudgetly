@@ -1,4 +1,4 @@
-'use client';
+
 import HomePage from '@/screens/PagesContent/HomePage.jsx';
 import config from '@/lib/panel-config';
 

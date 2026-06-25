@@ -1,4 +1,4 @@
-'use client';
+
 import SeoAdmin from '@/screens/PagesContent/SeoAdmin.jsx';
 import config from '@/lib/panel-config';
 

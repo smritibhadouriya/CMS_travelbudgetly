@@ -1,4 +1,4 @@
-'use client';
+
 import NewsletterSubscribersPage from '@/screens/PagesContent/NewsletterSubscribersPage.jsx';
 import config from '@/lib/panel-config';
 

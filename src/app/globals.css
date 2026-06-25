@@ -4,72 +4,14 @@
 
 /* ── From original Frontend/src/index.css ───────────────── */
 
-/* 🔒 Isolate Summernote from Tailwind */
-.note-editor,
-.note-editor * {
-  all: revert;
-  box-sizing: border-box;
-}
-
-/* Keep modal layering correct */
-.note-editor {
-  z-index: 60;
-}
-
-.sn-row {
-  display: flex;
-}
-
-.sn-img {
-  width: 40%;
-  text-wrap: unset;
-}
-
-.sn-img img {
-  width: 100%;
-  display: block;
-}
-
-/* Base editor styling */
-.note-editor .note-editable {
+/* ── Blog rich-text editor (CKEditor 5) ── */
+.ck-blog-editor .ck-editor__editable {
+  min-height: 460px;
   line-height: 1.6;
-  word-wrap: break-word;
 }
-
-/* Image common styling */
-.note-editor .note-editable img {
+.ck-blog-editor .ck-editor__editable img {
   max-width: 100%;
   height: auto;
-  display: inline-block;
-}
-
-/* LEFT aligned image */
-.note-editor .note-editable img.note-float-left {
-  float: left;
-  margin: 6px 16px 6px 0;
-}
-
-/* RIGHT aligned image */
-.note-editor .note-editable img.note-float-right {
-  float: right;
-  margin: 6px 0 6px 16px;
-}
-
-/* IMPORTANT: allow text to wrap correctly */
-.note-editor .note-editable p {
-  overflow: visible;
-}
-
-/* Clear float ONLY after image section ends */
-.note-editor .note-editable p::after {
-  content: "";
-  display: block;
-  clear: both;
-}
-
-/* Prevent empty space caused by <br> */
-.note-editor .note-editable br {
-  clear: none;
 }
 
 .no-scrollbar::-webkit-scrollbar {

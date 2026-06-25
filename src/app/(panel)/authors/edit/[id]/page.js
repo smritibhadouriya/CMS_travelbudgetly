@@ -1,4 +1,4 @@
-'use client';
+
 import AddAuthorPage from '@/screens/Author/AddAuthorPage.jsx';
 import config from '@/lib/panel-config';
 

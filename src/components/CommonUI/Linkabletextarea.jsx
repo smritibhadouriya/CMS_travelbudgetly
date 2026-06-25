@@ -1,3 +1,4 @@
+'use client';
 // components/CommonUI/LinkableTextarea.jsx
 // Reusable textarea with "🔗 Add Link" button
 // Select text → click Add Link → enter URL → inserts <a href="...">text</a>

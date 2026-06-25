@@ -1,4 +1,4 @@
-'use client';
+
 import PackageForm from '@/screens/PagesContent/PackageForm.jsx';
 import config from '@/lib/panel-config';
 
