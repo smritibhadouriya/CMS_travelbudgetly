@@ -1,0 +1,108 @@
+
+> cms-nextjs@0.1.0 build
+> next build
+
+▲ Next.js 16.2.9 (Turbopack)
+- Environments: .env
+
+  Creating an optimized production build ...
+(node:41776) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✓ Compiled successfully in 7.0s
+  Running TypeScript ...
+  Finished TypeScript in 117ms ...
+  Collecting page data using 11 workers ...
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+  Generating static pages using 11 workers (0/47) ...
+  Generating static pages using 11 workers (11/47) 
+  Generating static pages using 11 workers (23/47) 
+  Generating static pages using 11 workers (35/47) 
+✓ Generating static pages using 11 workers (47/47) in 761ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ƒ /api/auth/login
+├ ƒ /api/authors
+├ ƒ /api/authors/[id]
+├ ƒ /api/authors/profile/[slug]
+├ ƒ /api/banner-faq
+├ ƒ /api/banner-faq/[page]
+├ ƒ /api/blogpage
+├ ƒ /api/blogs
+├ ƒ /api/blogs/[id]
+├ ƒ /api/blogs/[id]/feature
+├ ƒ /api/blogs/[id]/publish
+├ ƒ /api/blogs/category/[category]
+├ ƒ /api/blogs/featured
+├ ƒ /api/blogs/slug/[slug]
+├ ƒ /api/blogs/tag/[tag]
+├ ƒ /api/blogs/top-picks
+├ ƒ /api/category-pages
+├ ƒ /api/category-pages/[slug]
+├ ƒ /api/comments
+├ ƒ /api/comments/[id]
+├ ƒ /api/comments/[id]/status
+├ ƒ /api/comments/blog/[blogId]
+├ ƒ /api/comments/blog/[blogId]/approved
+├ ƒ /api/comments/bulk
+├ ƒ /api/comments/stats
+├ ƒ /api/contact-message
+├ ƒ /api/contacts
+├ ƒ /api/contacts/[id]
+├ ƒ /api/images
+├ ƒ /api/images/[filename]
+├ ƒ /api/images/admin/cleanup
+├ ƒ /api/newsletter
+├ ƒ /api/newsletter/[id]
+├ ƒ /api/newsletter/stats
+├ ƒ /api/newsletter/subscribe
+├ ƒ /api/newsletter/unsubscribe
+├ ƒ /api/pages/about
+├ ƒ /api/pages/home
+├ ƒ /api/products
+├ ƒ /api/products/[slug]
+├ ƒ /api/robots.txt
+├ ƒ /api/seo
+├ ƒ /api/seo/all
+├ ƒ /api/seo/robots.txt
+├ ƒ /api/seo/sitemap.xml
+├ ƒ /api/settings
+├ ƒ /api/settings/banner/[page]
+├ ƒ /api/settings/faqs/[page]
+├ ƒ /api/sitemap.xml
+├ ƒ /api/upload/[file]
+├ ƒ /api/upload/image
+├ ○ /authors
+├ ○ /authors/add
+├ ƒ /authors/edit/[id]
+├ ƒ /authors/view/[id]
+├ ○ /blog
+├ ○ /blog/addblog
+├ ƒ /blog/edit/[id]
+├ ƒ /blog/view/[id]
+├ ○ /comments
+├ ○ /contact
+├ ○ /contactdetails
+├ ○ /dashboard
+├ ○ /home
+├ ○ /login
+├ ○ /newsletter
+└ ○ /seo-handling
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
