@@ -1,6 +1,12 @@
 import About from '@/screens/PagesContent/About.jsx';
-import config from '@/lib/panel-config';
+import { getAbout } from '@/lib/services/about.service';
 
-export default function Page() {
-  return <About config={config} />;
+// Singleton config — render per request, never statically prerender / cache.
+export const dynamic = 'force-dynamic';
+
+export default async function Page() {
+  // Mirrors GET /api/pages/about → { data: page || { slug: 'about' } }.
+  // Save/update still go through the existing API layer unchanged.
+  const initialData = (await getAbout('about')) || { slug: 'about' };
+  return <About initialData={initialData} />;
 }

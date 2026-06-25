@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { toast } from "react-toastify";
 import { SectionCard, Divider, Input, Textarea, Toggle, VisBadge } from "../../components/CommonUI/UI.jsx";
 import ImagePicker from "../../components/CommonUI/ImagePicker.jsx";
@@ -14,73 +14,89 @@ const appendImg = (fd, key, img) => { if (img?.file instanceof File) fd.append(k
 /* ─── blank factories ─── */
 const blankSeo = () => ({ metaTitle:"", metaDescription:"", metaKeywords:[], canonicalUrl:"", index:true, follow:true, image:mapImg() });
 
-export default function HomePageAdmin() {
+export default function HomePageAdmin({ initialData = {} }) {
+  // Initial page data comes from the Server Component (service → Prisma), not
+  // axios. Seeds mirror `load`'s mapping exactly. `load` is retained for the
+  // post-save refresh + the retry button.
+  const d = initialData || {};
   const [tab, setTab] = useState("content");
 
   /* Hero */
-  const [heroEnabled,  setHeroEnabled]  = useState(true);
-  const [heroMobile,   setHeroMobile]   = useState(mapImg());
-  const [heroTablet,   setHeroTablet]   = useState(mapImg());
-  const [heroDesktop,  setHeroDesktop]  = useState(mapImg());
-  const [heroLaptop,   setHeroLaptop]   = useState(mapImg());
+  const [heroEnabled,  setHeroEnabled]  = useState(d.heroEnabled !== false);
+  const [heroMobile,   setHeroMobile]   = useState(mapImg({ url: d.heroImageMobile }));
+  const [heroTablet,   setHeroTablet]   = useState(mapImg({ url: d.heroImageTablet }));
+  const [heroDesktop,  setHeroDesktop]  = useState(mapImg({ url: d.heroImageDesktop }));
+  const [heroLaptop,   setHeroLaptop]   = useState(mapImg({ url: d.heroImageLaptop }));
 
   /* Featured Destinations */
-  const [destinationsEnabled,   setDestinationsEnabled]   = useState(true);
-  const [destinationsWatermark, setDestinationsWatermark] = useState("");
-  const [destinationsHeading,   setDestinationsHeading]   = useState("");
-  const [destinationsSubtext,   setDestinationsSubtext]   = useState("");
+  const [destinationsEnabled,   setDestinationsEnabled]   = useState(d.destinationsEnabled !== false);
+  const [destinationsWatermark, setDestinationsWatermark] = useState(d.destinationsWatermark || "");
+  const [destinationsHeading,   setDestinationsHeading]   = useState(d.destinationsHeading || "");
+  const [destinationsSubtext,   setDestinationsSubtext]   = useState(d.destinationsSubtext || "");
 
   /* Special Offers */
-  const [specialOffersEnabled, setSpecialOffersEnabled] = useState(true);
-  const [specialOffersHeading, setSpecialOffersHeading] = useState("");
+  const [specialOffersEnabled, setSpecialOffersEnabled] = useState(d.specialOffersEnabled !== false);
+  const [specialOffersHeading, setSpecialOffersHeading] = useState(d.specialOffersHeading || "");
 
   /* Popular Cities */
-  const [popularCitiesEnabled,         setPopularCitiesEnabled]         = useState(true);
-  const [popularCitiesHeading,         setPopularCitiesHeading]         = useState("");
-  const [popularCitiesExploreLinkText, setPopularCitiesExploreLinkText] = useState("");
+  const [popularCitiesEnabled,         setPopularCitiesEnabled]         = useState(d.popularCitiesEnabled !== false);
+  const [popularCitiesHeading,         setPopularCitiesHeading]         = useState(d.popularCitiesHeading || "");
+  const [popularCitiesExploreLinkText, setPopularCitiesExploreLinkText] = useState(d.popularCitiesExploreLinkText || "");
 
   /* Spiritual Packages */
-  const [spritualpackage,        setSpritualpackage]        = useState(true);
-  const [spritualpackageHeading, setSpritualpackageHeading] = useState("");
+  const [spritualpackage,        setSpritualpackage]        = useState(d.spritualpackage !== false);
+  const [spritualpackageHeading, setSpritualpackageHeading] = useState(d.spritualpackageHeading || "");
 
   /* Why Choose Us */
-  const [whyChooseUsEnabled,   setWhyChooseUsEnabled]   = useState(true);
-  const [whyChooseUsWatermark, setWhyChooseUsWatermark] = useState("");
-  const [whyChooseUsHeading,   setWhyChooseUsHeading]   = useState("");
-  const [trustFeatures, setTrustFeatures] = useState([]);
-  const [centerImgs,    setCenterImgs]    = useState([]);
+  const [whyChooseUsEnabled,   setWhyChooseUsEnabled]   = useState(d.whyChooseUsEnabled !== false);
+  const [whyChooseUsWatermark, setWhyChooseUsWatermark] = useState(d.whyChooseUsWatermark || "");
+  const [whyChooseUsHeading,   setWhyChooseUsHeading]   = useState(d.whyChooseUsHeading || "");
+  const [trustFeatures, setTrustFeatures] = useState((Array.isArray(d.trustFeatures) ? d.trustFeatures : []).map(f => ({ icon:f?.icon||"", title:f?.title||"", desc:f?.desc||"" })));
+  const [centerImgs,    setCenterImgs]    = useState(() => {
+    let center = [];
+    try { center = JSON.parse(d.whyChooseUsCenterImages || "[]"); } catch { center = []; }
+    return (Array.isArray(center) ? center : []).map(u => mapImg({ url: typeof u === "string" ? u : (u?.url || u?.src || "") }));
+  });
 
   /* Popular Packages */
-  const [packagesEnabled,         setPackagesEnabled]         = useState(true);
-  const [packagesWatermark,       setPackagesWatermark]       = useState("");
-  const [packagesHeading,         setPackagesHeading]         = useState("");
-  const [packagesSubtext,         setPackagesSubtext]         = useState("");
-  const [packagesExploreLinkText, setPackagesExploreLinkText] = useState("");
+  const [packagesEnabled,         setPackagesEnabled]         = useState(d.packagesEnabled !== false);
+  const [packagesWatermark,       setPackagesWatermark]       = useState(d.packagesWatermark || "");
+  const [packagesHeading,         setPackagesHeading]         = useState(d.packagesHeading || "");
+  const [packagesSubtext,         setPackagesSubtext]         = useState(d.packagesSubtext || "");
+  const [packagesExploreLinkText, setPackagesExploreLinkText] = useState(d.packagesExploreLinkText || "");
 
   /* Seasonal Travel */
-  const [seasonalEnabled,   setSeasonalEnabled]   = useState(true);
-  const [seasonalWatermark, setSeasonalWatermark] = useState("");
-  const [seasonalHeading,   setSeasonalHeading]   = useState("");
-  const [seasonalSubtext,   setSeasonalSubtext]   = useState("");
-  const [seasons, setSeasons] = useState([]);
+  const [seasonalEnabled,   setSeasonalEnabled]   = useState(d.seasonalEnabled !== false);
+  const [seasonalWatermark, setSeasonalWatermark] = useState(d.seasonalWatermark || "");
+  const [seasonalHeading,   setSeasonalHeading]   = useState(d.seasonalHeading || "");
+  const [seasonalSubtext,   setSeasonalSubtext]   = useState(d.seasonalSubtext || "");
+  const [seasons, setSeasons] = useState((Array.isArray(d.seasons) ? d.seasons : []).map(s => ({ id:s?.id||"", label:s?.label||"", image:s?.image||"" })));
 
   /* Latest Blogs */
-  const [blogsEnabled,         setBlogsEnabled]         = useState(true);
-  const [blogsWatermark,       setBlogsWatermark]       = useState("");
-  const [blogsHeading,         setBlogsHeading]         = useState("");
-  const [blogsSubheading,      setBlogsSubheading]      = useState("");
-  const [blogsExploreLinkText, setBlogsExploreLinkText] = useState("");
+  const [blogsEnabled,         setBlogsEnabled]         = useState(d.blogsEnabled !== false);
+  const [blogsWatermark,       setBlogsWatermark]       = useState(d.blogsWatermark || "");
+  const [blogsHeading,         setBlogsHeading]         = useState(d.blogsHeading || "");
+  const [blogsSubheading,      setBlogsSubheading]      = useState(d.blogsSubheading || "");
+  const [blogsExploreLinkText, setBlogsExploreLinkText] = useState(d.blogsExploreLinkText || "");
 
   /* Newsletter */
-  const [newsletterEnabled, setNewsletterEnabled] = useState(true);
-  const [newsletterHeading, setNewsletterHeading] = useState("");
-  const [newsletterSubtext, setNewsletterSubtext] = useState("");
+  const [newsletterEnabled, setNewsletterEnabled] = useState(d.newsletterEnabled !== false);
+  const [newsletterHeading, setNewsletterHeading] = useState(d.newsletterHeading || "");
+  const [newsletterSubtext, setNewsletterSubtext] = useState(d.newsletterSubtext || "");
 
   /* SEO */
-  const [seo, setSeo] = useState(blankSeo());
+  const [seo, setSeo] = useState(d.seo ? {
+    metaTitle: d.seo?.metaTitle || "",
+    metaDescription: d.seo?.metaDescription || "",
+    metaKeywords: d.seo?.metaKeywords || [],
+    canonicalUrl: d.seo?.canonicalUrl || "",
+    index: d.seo?.index !== false,
+    follow: d.seo?.follow !== false,
+    image: mapImg(d.seo?.image),
+  } : blankSeo());
 
   const [saving,  setSaving]  = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadErr, setLoadErr] = useState(null);
   const inFlight = useRef(false);
 
@@ -162,7 +178,8 @@ export default function HomePageAdmin() {
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Initial data arrives via the `initialData` prop (server-fetched) — no
+  // on-mount GET. `load` below still runs after save and on the retry button.
 
   const handleSave = async () => {
     if (inFlight.current || saving) return;

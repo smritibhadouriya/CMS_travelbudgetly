@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { toast } from "react-toastify";
 import { SectionCard, Divider, Input } from "../../components/CommonUI/UI.jsx";
 import { getRedirects, createRedirect, updateRedirect, deleteRedirect } from "../../service/api";
 
 const blankForm = () => ({ oldSlug: "", newSlug: "", pageType: "" });
 
-export default function RedirectsAdmin() {
-  const [redirects, setRedirects] = useState([]);
+export default function RedirectsAdmin({ initialRedirects = [] }) {
+  // Initial list comes from the Server Component (service → Prisma), not axios.
+  const [redirects, setRedirects] = useState(initialRedirects);
   const [form, setForm]           = useState(blankForm());
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadErr, setLoadErr] = useState(null);
   const [adding,  setAdding]  = useState(false);
   const [busyId,  setBusyId]  = useState(null);
@@ -35,7 +36,8 @@ export default function RedirectsAdmin() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Initial redirects arrive via the `initialRedirects` prop (server-fetched).
+  // `load` is retained for post-mutation refresh (add/update/delete) below.
 
   const handleAdd = async () => {
     if (inFlight.current || adding) return;

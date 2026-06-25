@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { toast } from "react-toastify";
 import { SectionCard, Divider, Input, Textarea } from "../../components/CommonUI/UI.jsx";
 import ImagePicker from "../../components/CommonUI/ImagePicker.jsx";
@@ -14,22 +14,34 @@ const appendImg = (fd, key, img) => { if (img?.file instanceof File) fd.append(k
 const blankSeo = () => ({ metaTitle:"", metaDescription:"", metaKeywords:[], canonicalUrl:"", index:true, follow:true, image:mapImg() });
 const blankStat = () => ({ value:"", label:"" });
 
-export default function AboutAdmin() {
+export default function AboutAdmin({ initialData = {} }) {
+  // Initial page data comes from the Server Component (service → Prisma), not
+  // axios. Seeds mirror `load`'s mapping exactly. `load` is retained for the
+  // post-save refresh + the retry button.
+  const d = initialData || {};
   const [tab, setTab] = useState("content");
 
-  const [heroHeading, setHeroHeading]       = useState("");
-  const [heroSubtext, setHeroSubtext]       = useState("");
-  const [heroImage, setHeroImage]           = useState(mapImg());
-  const [missionHeading, setMissionHeading] = useState("");
-  const [missionText, setMissionText]       = useState("");
-  const [journeyHeading, setJourneyHeading] = useState("");
-  const [journeyBody, setJourneyBody]       = useState("");
-  const [journeyImage, setJourneyImage]     = useState(mapImg());
-  const [stats, setStats]                   = useState([]);
-  const [seo, setSeo]                       = useState(blankSeo());
+  const [heroHeading, setHeroHeading]       = useState(d.heroHeading || "");
+  const [heroSubtext, setHeroSubtext]       = useState(d.heroSubtext || "");
+  const [heroImage, setHeroImage]           = useState(mapImg(d.heroImage));
+  const [missionHeading, setMissionHeading] = useState(d.missionHeading || "");
+  const [missionText, setMissionText]       = useState(d.missionText || "");
+  const [journeyHeading, setJourneyHeading] = useState(d.journeyHeading || "");
+  const [journeyBody, setJourneyBody]       = useState(d.journeyBody || "");
+  const [journeyImage, setJourneyImage]     = useState(mapImg(d.journeyImage));
+  const [stats, setStats]                   = useState((d.stats || []).map(s => ({ value:s?.value||"", label:s?.label||"" })));
+  const [seo, setSeo]                       = useState({
+    metaTitle:        d.seo?.metaTitle || "",
+    metaDescription:  d.seo?.metaDescription || "",
+    metaKeywords:     d.seo?.metaKeywords || [],
+    canonicalUrl:     d.seo?.canonicalUrl || "",
+    index:            d.seo?.index !== false,
+    follow:           d.seo?.follow !== false,
+    image:            mapImg(d.seo?.image),
+  });
 
   const [saving,  setSaving]  = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadErr, setLoadErr] = useState(null);
   const inFlight = useRef(false);
 
@@ -68,7 +80,8 @@ export default function AboutAdmin() {
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Initial data arrives via the `initialData` prop (server-fetched) — no
+  // on-mount GET. `load` below still runs after save and on the retry button.
 
   const handleSave = async () => {
     if (inFlight.current || saving) return;

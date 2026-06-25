@@ -2,13 +2,13 @@
 // GET  /api/pages/about → about page content
 // POST /api/pages/about → save
 
-import prisma from "../config/prisma.js";
+import * as aboutService from "../lib/services/about.service.js";
 import { cleanHTML, normalizeImage, parseSeo, parseBody, fileUrl } from "../utils/helpers.js";
 
 /* ── GET /api/pages/about ── */
 export const getAboutPage = async (req, res) => {
   try {
-    const page = await prisma.about.findUnique({ where: { slug: "about" } });
+    const page = await aboutService.getAbout("about");
     res.json({ success: true, data: page || { slug: "about" } });
   } catch (err) {
     console.error("❌ getAboutPage:", err.message);
@@ -57,11 +57,7 @@ export const saveAboutPage = async (req, res) => {
       if (file.fieldname === "seoImage")     payload.seo.image    = normalizeImage({ src });
     });
 
-    const updated = await prisma.about.upsert({
-      where:  { slug: "about" },
-      update: payload,
-      create: payload,
-    });
+    const updated = await aboutService.upsertAbout("about", payload);
 
     res.json({ success: true, message: "About page saved", data: updated });
   } catch (err) {

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   getNewsletterSubscribers,
   getNewsletterStats,
@@ -89,16 +89,24 @@ const Row = ({ label, value }) => (
 /* ══════════════════════════════════════════════════════════════
    MAIN PAGE
 ══════════════════════════════════════════════════════════════ */
-export const NewsletterSubscribersPage = () => {
-  const [subscribers, setSubscribers] = useState([])
-  const [stats,       setStats]       = useState(null)
-  const [loading,     setLoading]     = useState(true)
+export const NewsletterSubscribersPage = ({
+  initialSubscribers = { subscribers: [], total: 0, totalPages: 1 },
+  initialStats = null,
+  initialPage = 1,
+  initialStatus = '',
+}) => {
+  // Initial subscribers + stats come from the Server Component (service → Prisma),
+  // not axios. Pagination/status changes + delete-refresh still refetch client-side.
+  const [subscribers, setSubscribers] = useState(initialSubscribers.subscribers)
+  const [stats,       setStats]       = useState(initialStats)
+  const [loading,     setLoading]     = useState(false)
   const [selected,    setSelected]    = useState(null)   // for modal
-  const [status,      setStatus]      = useState('')     // filter: '' | 'active' | 'inactive'
-  const [page,        setPage]        = useState(1)
-  const [totalPages,  setTotalPages]  = useState(1)
-  const [total,       setTotal]       = useState(0)
+  const [status,      setStatus]      = useState(initialStatus)  // filter: '' | 'active' | 'inactive'
+  const [page,        setPage]        = useState(initialPage)
+  const [totalPages,  setTotalPages]  = useState(initialSubscribers.totalPages)
+  const [total,       setTotal]       = useState(initialSubscribers.total)
   const [search,      setSearch]      = useState('')
+  const didMountRef = useRef(false)    // skip the initial fetch (use seeded data)
 
   const LIMIT = 15
 
@@ -121,7 +129,12 @@ export const NewsletterSubscribersPage = () => {
     }
   }, [page, status])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  // Initial data arrives via props (server-fetched); skip the mount fetch.
+  // Subsequent page/status changes still refetch — pagination & filter intact.
+  useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return }
+    fetchData()
+  }, [fetchData])
 
   /* ── Delete ── */
   const handleDelete = async (id) => {

@@ -1,6 +1,6 @@
 // backend/controllers/settings.controller.js
 // Global site settings + sitemap.xml / robots.txt generation.
-import prisma from "../config/prisma.js";
+import * as settingsService from '../lib/services/settings.service.js';
 import { parseBody, fileUrl } from "../utils/helpers.js";
 
 /* ══════════════════════════════
@@ -8,7 +8,7 @@ import { parseBody, fileUrl } from "../utils/helpers.js";
 ══════════════════════════════ */
 export const getSettings = async (req, res) => {
   try {
-    const settings = await prisma.settings.findUnique({ where: { slug: "global" } });
+    const settings = await settingsService.getSettings();
     res.json({ success: true, data: settings || {} });
   } catch (err) {
     console.error("❌ getSettings:", err.message);
@@ -56,11 +56,7 @@ export const saveSettings = async (req, res) => {
       if (file.fieldname === "faviconFile") payload.faviconUrl = src;
     });
 
-    const updated = await prisma.settings.upsert({
-      where:  { slug: "global" },
-      update: payload,
-      create: payload,
-    });
+    const updated = await settingsService.upsertSettings(payload);
     res.json({ success: true, message: "Settings saved", data: updated });
   } catch (err) {
     console.error("❌ saveSettings:", err.message);
@@ -73,31 +69,22 @@ export const saveSettings = async (req, res) => {
 ══════════════════════════════ */
 export const generateSitemap = async (req, res) => {
   try {
-    const settings = await prisma.settings.findUnique({ where: { slug: "global" } });
+    const settings = await settingsService.getSettings();
     const baseUrl  = (settings?.siteUrl || "https://www.TravelBudgetly.com").replace(/\/$/, "");
 
     let blogs = [];
     try {
-      blogs = await prisma.blog.findMany({
-        where:  { isPublished: true },
-        select: { slug: true, updatedAt: true },
-      });
+      blogs = await settingsService.getPublishedBlogsForSitemap();
     } catch (_) {}
 
         let authors = [];
     try {
-      authors = await prisma.author.findMany({
-       where: { isActive: true },
-        select: { slug: true, updatedAt: true },
-      });
+      authors = await settingsService.getActiveAuthorsForSitemap();
     } catch (_) {}
 
     let packages = [];
     try {
-      packages = await prisma.package.findMany({
-        where:  { isPublished: true },
-        select: { slug: true, updatedAt: true },
-      });
+      packages = await settingsService.getPublishedPackagesForSitemap();
     } catch (_) {}
 
     const staticPages = [
@@ -141,7 +128,7 @@ export const generateSitemap = async (req, res) => {
 ══════════════════════════════ */
 export const generateRobots = async (req, res) => {
   try {
-    const settings = await prisma.settings.findUnique({ where: { slug: "global" } });
+    const settings = await settingsService.getSettings();
     const baseUrl  = (settings?.siteUrl || "https://www.TravelBudgetly.com").replace(/\/$/, "");
 
     let txt = [

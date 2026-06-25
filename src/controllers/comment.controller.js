@@ -1,7 +1,5 @@
 // backend/controllers/comment.controller.js
-import prisma from "../config/prisma.js";
-
-const BLOG_SELECT = { select: { id: true, title: true, slug: true } };
+import * as commentService from '../lib/services/comment.service.js';
 
 /* ─────────────────────────────────────────
    PUBLIC: Submit comment
@@ -18,7 +16,7 @@ export const addComment = async (req, res) => {
       });
     }
 
-    const blog = await prisma.blog.findUnique({ where: { id: blogId }, select: { id: true } });
+    const blog = await commentService.findBlogById(blogId);
     if (!blog) {
       return res.status(404).json({
         success: false,
@@ -26,14 +24,12 @@ export const addComment = async (req, res) => {
       });
     }
 
-    const comment = await prisma.comment.create({
-      data: {
-        blogId,
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        message: message.trim(),
-        status: "pending",
-      },
+    const comment = await commentService.createComment({
+      blogId,
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      message: message.trim(),
+      status: "pending",
     });
 
     res.status(201).json({
@@ -52,11 +48,7 @@ export const addComment = async (req, res) => {
 ───────────────────────────────────────── */
 export const getApprovedComments = async (req, res) => {
   try {
-    const comments = await prisma.comment.findMany({
-      where:   { blogId: req.params.blogId, status: "approved" },
-      orderBy: { createdAt: "desc" },
-      select:  { id: true, name: true, message: true, createdAt: true },
-    });
+    const comments = await commentService.findApprovedComments(req.params.blogId);
 
     res.json({ success: true, comments });
   } catch (err) {
@@ -110,11 +102,7 @@ export const getAllComments = async (req, res) => {
 
     /* ───────── GROUPED MODE ───────── */
     if (grouped === "true") {
-      const rows = await prisma.comment.findMany({
-        where,
-        include: { blog: BLOG_SELECT },
-        orderBy: { createdAt: sortOrder },
-      });
+      const rows = await commentService.findCommentsWithBlog(where, sortOrder);
 
       const map = new Map();
       for (const c of rows) {
@@ -149,16 +137,12 @@ export const getAllComments = async (req, res) => {
     /* ───────── FLAT MODE ───────── */
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const [total, comments] = await Promise.all([
-      prisma.comment.count({ where }),
-      prisma.comment.findMany({
-        where,
-        include: { blog: BLOG_SELECT },
-        orderBy: { createdAt: sortOrder },
-        skip,
-        take: parseInt(limit),
-      }),
-    ]);
+    const [total, comments] = await commentService.countAndFindComments(
+      where,
+      sortOrder,
+      skip,
+      parseInt(limit),
+    );
 
     res.json({
       success: true,
@@ -179,15 +163,7 @@ export const getAllComments = async (req, res) => {
 ───────────────────────────────────────── */
 export const getCommentStats = async (req, res) => {
   try {
-    const [statusCounts, totalByBlog, pendingByBlog] = await Promise.all([
-      prisma.comment.groupBy({ by: ["status"], _count: { _all: true } }),
-      prisma.comment.groupBy({ by: ["blogId"], _count: { _all: true } }),
-      prisma.comment.groupBy({
-        by: ["blogId"],
-        where: { status: "pending" },
-        _count: { _all: true },
-      }),
-    ]);
+    const [statusCounts, totalByBlog, pendingByBlog] = await commentService.groupCommentStats();
 
     /* top 5 blogs by total comments */
     const pendingMap = new Map(pendingByBlog.map(p => [p.blogId, p._count._all]));
@@ -195,10 +171,7 @@ export const getCommentStats = async (req, res) => {
       .sort((a, b) => b._count._all - a._count._all)
       .slice(0, 5);
 
-    const blogs = await prisma.blog.findMany({
-      where:  { id: { in: topRanked.map(t => t.blogId) } },
-      select: { id: true, title: true, slug: true },
-    });
+    const blogs = await commentService.findBlogsByIds(topRanked.map(t => t.blogId));
     const blogMap = new Map(blogs.map(b => [b.id, b]));
 
     const topBlogs = topRanked.map(t => ({
@@ -236,11 +209,7 @@ export const updateCommentStatus = async (req, res) => {
       });
     }
 
-    const comment = await prisma.comment.update({
-      where:   { id: req.params.id },
-      data:    { status },
-      include: { blog: BLOG_SELECT },
-    });
+    const comment = await commentService.updateCommentStatus(req.params.id, status);
 
     res.json({ success: true, comment });
   } catch (err) {
@@ -257,7 +226,7 @@ export const updateCommentStatus = async (req, res) => {
 ───────────────────────────────────────── */
 export const deleteComment = async (req, res) => {
   try {
-    await prisma.comment.delete({ where: { id: req.params.id } });
+    await commentService.deleteComment(req.params.id);
     res.json({ success: true, message: "Comment deleted" });
   } catch (err) {
     if (err.code === "P2025") {
@@ -284,7 +253,7 @@ export const bulkUpdateComments = async (req, res) => {
 
     /* 🗑 Bulk delete */
     if (action === "delete") {
-      await prisma.comment.deleteMany({ where: { id: { in: ids } } });
+      await commentService.deleteManyComments(ids);
 
       return res.json({
         success: true,
@@ -299,7 +268,7 @@ export const bulkUpdateComments = async (req, res) => {
       });
     }
 
-    await prisma.comment.updateMany({ where: { id: { in: ids } }, data: { status } });
+    await commentService.updateManyCommentStatus(ids, status);
 
     res.json({
       success: true,

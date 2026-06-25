@@ -1,7 +1,7 @@
 // src/controllers/images.controller.js
 import fs from 'fs';
 import path from 'path';
-import prisma from '../config/prisma.js';
+import * as cleanupImagesService from '../lib/services/cleanupImages.service.js';
 
 // In Next.js the server runs from the project root (cms-nextjs); uploads
 // live in <root>/upload (same dir the upload helper writes to).
@@ -97,17 +97,8 @@ export const cleanupUnusedImages = async (_req, res) => {
     };
 
     // Saare models scan karo
-    const [blogs, packages, homePage, aboutPage, blogPage, packagePage, authors, offers, seoData] = await Promise.all([
-      prisma.blog.findMany({ select: { image: true, bannerImage: true, seo: true, content: true } }),
-      prisma.package.findMany({ select: { images: true, imageUrls: true, seo: true } }),
-      prisma.home.findMany(),
-      prisma.about.findMany(),
-      prisma.blogPage.findMany(),
-      prisma.packagePage.findMany(),
-      prisma.author.findMany({ select: { image: true } }),
-      prisma.offer.findMany({ select: { banner: true } }),
-      prisma.seo.findMany({ select: { seoImage: true } }),
-    ]);
+    const [blogs, packages, homePage, aboutPage, blogPage, packagePage, authors, offers, seoData] =
+      await cleanupImagesService.getRecordsForImageScan();
 
     [...blogs, ...packages, ...homePage, ...aboutPage, ...blogPage, ...packagePage, ...authors, ...offers, ...seoData]
       .forEach(collectFromJson);
@@ -156,17 +147,8 @@ const isImageInUse = async (filename) => {
     return str.includes(filename);
   };
 
-  const [blogs, packages, homePage, aboutPage, blogPage, packagePage, authors, offers, seoData] = await Promise.all([
-    prisma.blog.findMany({ select: { image: true, bannerImage: true, seo: true, content: true } }),
-    prisma.package.findMany({ select: { images: true, imageUrls: true, seo: true } }),
-    prisma.home.findMany(),
-    prisma.about.findMany(),
-    prisma.blogPage.findMany(),
-    prisma.packagePage.findMany(),
-    prisma.author.findMany({ select: { image: true } }),
-    prisma.offer.findMany({ select: { banner: true } }),
-    prisma.seo.findMany({ select: { seoImage: true } }),
-  ]);
+  const [blogs, packages, homePage, aboutPage, blogPage, packagePage, authors, offers, seoData] =
+    await cleanupImagesService.getRecordsForImageScan();
 
   return [...blogs, ...packages, ...homePage, ...aboutPage, ...blogPage, ...packagePage, ...authors, ...offers, ...seoData]
     .some(checkJson);

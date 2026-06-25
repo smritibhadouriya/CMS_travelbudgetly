@@ -1,7 +1,13 @@
-
 import BlogTableView from '@/screens/Blog/BlogTableView.jsx';
-import config from '@/lib/panel-config';
+import { listBlogs } from '@/lib/services/blog.service';
 
-export default function Page() {
-  return <BlogTableView config={config} />;
+// Live admin list — render per request, never statically prerender / cache.
+export const dynamic = 'force-dynamic';
+
+export default async function Page() {
+  // Same query the old GET /api/blogs (no params) returned: controller default
+  // limit=100, where={}, ordered [{order asc},{publishedDate desc}], author included.
+  // The client island still does all search/filter/sort/pagination in-memory.
+  const initialBlogs = await listBlogs({ where: {}, skip: 0, take: 100 });
+  return <BlogTableView initialBlogs={initialBlogs} />;
 }

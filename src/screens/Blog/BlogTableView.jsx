@@ -36,12 +36,13 @@ const CAT_COLORS = {
   'travel':           { bg: '#ef444418', text: '#ef4444' },
 };
 
-export default function BlogTableView() {
+export default function BlogTableView({ initialBlogs = [] }) {
   const navigate  = useNavigate();
   const importRef = useRef(null);
 
-  const [blogList,    setBlogList]    = useState([]);
-  const [loading,     setLoading]     = useState(true);
+  // Initial list comes from the Server Component (service → Prisma), not axios.
+  const [blogList,    setBlogList]    = useState(initialBlogs);
+  const [loading,     setLoading]     = useState(false);
   const [deleteTgt,   setDeleteTgt]   = useState(null);
 
   const [search,      setSearch]      = useState('');
@@ -71,11 +72,9 @@ export default function BlogTableView() {
     }
   };
 
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchBlogs(controller.signal);
-    return () => controller.abort();
-  }, []);
+  // NOTE: initial blog list now arrives via the `initialBlogs` prop (server-fetched).
+  // `fetchBlogs` is retained solely for the CSV-import refresh below (create flow,
+  // intentionally untouched) — there is no on-mount axios read anymore.
 
   useEffect(() => {
     if (dateF !== 'custom_single') setDateSingle('');

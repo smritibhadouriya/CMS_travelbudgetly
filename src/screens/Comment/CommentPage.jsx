@@ -262,10 +262,12 @@ function BlogGroup({ group, selectedIds, onToggle, onToggleGroup, onStatus, onDe
 /* ════════════════════════════════════════════
    MAIN PAGE
 ════════════════════════════════════════════ */
-export default function CommentsPage() {
-  const [groups,       setGroups]       = useState([]);
+export default function CommentsPage({ initialComments = [] }) {
+  // Initial grouped comments come from the Server Component (service → Prisma),
+  // not axios. Filters/search/sort/date + the 45s poll still refetch client-side.
+  const [groups,       setGroups]       = useState(initialComments);
   const [stats,        setStats]        = useState(null);
-  const [loading,      setLoading]      = useState(true);
+  const [loading,      setLoading]      = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
   const [activeTab,    setActiveTab]    = useState("pending");
   const [selected,     setSelected]     = useState([]);
@@ -278,6 +280,7 @@ export default function CommentsPage() {
   const [showFilters,  setShowFilters]  = useState(false);
   const autoRefreshRef = useRef(null);
   const prevTotalRef   = useRef(null);
+  const didMountRef     = useRef(false);   // skip the initial fetch (seeded data)
 
   /* Debounce search */
   useEffect(() => {
@@ -323,7 +326,13 @@ export default function CommentsPage() {
     }
   }, [activeTab, debouncedSearch, sort, dateFilter]);
 
-  useEffect(() => { loadComments(true); },  [loadComments]);
+  // Initial grouped comments arrive via the `initialComments` prop (server-fetched);
+  // skip the first run so we don't refetch on mount. Subsequent runs (tab/search/
+  // sort/date changes) still fetch — filters stay intact.
+  useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return; }
+    loadComments(true);
+  }, [loadComments]);
   useEffect(() => { loadStats(); },         [loadStats]);
 
   /* Auto-refresh every 45s */

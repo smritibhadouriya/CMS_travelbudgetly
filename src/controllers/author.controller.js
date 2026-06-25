@@ -1,5 +1,5 @@
 // backend/controllers/author.controller.js
-import prisma from "../config/prisma.js";
+import * as authorService from '../lib/services/author.service.js';
 import { fileUrl } from "../utils/helpers.js";
 
 /* ── helpers ── */
@@ -18,27 +18,6 @@ const parseJSON = (val) => {
   }
 };
 
-const toSlug = (text = "") =>
-  text.toLowerCase().trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-");
-
-/* slug ko unique banao — Author table mein collision check */
-const uniqueAuthorSlug = async (name, excludeId = null) => {
-  const baseSlug = toSlug(name);
-  let slug = baseSlug;
-  let counter = 1;
-  while (
-    await prisma.author.findFirst({
-      where: { slug, ...(excludeId ? { id: { not: excludeId } } : {}) },
-      select: { id: true },
-    })
-  ) {
-    slug = `${baseSlug}-${counter++}`;
-  }
-  return slug;
-};
-
 /* ══════════════════════════════════════
    CREATE AUTHOR
 ══════════════════════════════════════ */
@@ -53,7 +32,7 @@ export const createAuthor = async (req, res) => {
     // ✅ Email optional — only check uniqueness if provided
     const email = req.body.email?.trim() || null;
     if (email) {
-      const exists = await prisma.author.findUnique({ where: { email: email.toLowerCase() } });
+      const exists = await authorService.findAuthorByEmail(email.toLowerCase());
       if (exists) {
         return res.status(409).json({ success: false, message: "Author with this email already exists" });
       }
@@ -72,17 +51,15 @@ export const createAuthor = async (req, res) => {
           : "",
     };
 
-    const author = await prisma.author.create({
-      data: {
-        name:        name.trim(),
-        slug:        await uniqueAuthorSlug(name.trim()),
-        // ✅ null instead of empty string — Postgres unique allows many NULLs
-        email:       email ? email.toLowerCase() : null,
-        bio:         bio?.trim()         || "",
-        designation: designation?.trim() || "",
-        image,
-        socialLinks: parseJSON(req.body.socialLinks) || {},
-      },
+    const author = await authorService.createAuthor({
+      name:        name.trim(),
+      slug:        await authorService.uniqueAuthorSlug(name.trim()),
+      // ✅ null instead of empty string — Postgres unique allows many NULLs
+      email:       email ? email.toLowerCase() : null,
+      bio:         bio?.trim()         || "",
+      designation: designation?.trim() || "",
+      image,
+      socialLinks: parseJSON(req.body.socialLinks) || {},
     });
 
     res.status(201).json({ success: true, author });
@@ -100,7 +77,7 @@ export const createAuthor = async (req, res) => {
 ══════════════════════════════════════ */
 export const updateAuthor = async (req, res) => {
   try {
-    const author = await prisma.author.findUnique({ where: { id: req.params.id } });
+    const author = await authorService.findAuthorById(req.params.id);
     if (!author) {
       return res.status(404).json({ success: false, message: "Author not found" });
     }
@@ -116,10 +93,7 @@ export const updateAuthor = async (req, res) => {
     /* ── duplicate email check ── */
     const incomingEmail = req.body.email?.trim() || null;
     if (incomingEmail && incomingEmail.toLowerCase() !== author.email) {
-      const dup = await prisma.author.findFirst({
-        where: { email: incomingEmail.toLowerCase(), id: { not: author.id } },
-        select: { id: true },
-      });
+      const dup = await authorService.findDuplicateEmail(incomingEmail.toLowerCase(), author.id);
       if (dup) {
         return res.status(409).json({ success: false, message: "Email already in use" });
       }
@@ -128,7 +102,7 @@ export const updateAuthor = async (req, res) => {
     /* ── unique slug ── */
     let slug = author.slug;
     if (req.body.name?.trim()) {
-      slug = await uniqueAuthorSlug(req.body.name.trim(), author.id);
+      slug = await authorService.uniqueAuthorSlug(req.body.name.trim(), author.id);
     }
 
     /* ── build updates ── */
@@ -166,10 +140,7 @@ export const updateAuthor = async (req, res) => {
       };
     }
 
-    const updated = await prisma.author.update({
-      where: { id: author.id },
-      data:  updates,
-    });
+    const updated = await authorService.updateAuthor(author.id, updates);
 
     res.json({ success: true, author: updated });
   } catch (err) {
@@ -189,7 +160,7 @@ export const getAllAuthors = async (req, res) => {
     const where = {};
     if (req.query.active === "true") where.isActive = true;
 
-    const authors = await prisma.author.findMany({ where, orderBy: { createdAt: "desc" } });
+    const authors = await authorService.findAuthors(where);
     res.json({ success: true, authors });
   } catch (err) {
     console.error("Get authors error:", err);
@@ -202,7 +173,7 @@ export const getAllAuthors = async (req, res) => {
 ══════════════════════════════════════ */
 export const getAuthorById = async (req, res) => {
   try {
-    const author = await prisma.author.findUnique({ where: { id: req.params.id } });
+    const author = await authorService.findAuthorById(req.params.id);
     if (!author) {
       return res.status(404).json({ success: false, message: "Author not found" });
     }
@@ -218,20 +189,12 @@ export const getAuthorById = async (req, res) => {
 ══════════════════════════════════════ */
 export const getAuthorWithBlogs = async (req, res) => {
   try {
-    const author = await prisma.author.findUnique({ where: { slug: req.params.slug } });
+    const author = await authorService.findAuthorBySlug(req.params.slug);
     if (!author) {
       return res.status(404).json({ success: false, message: "Author not found" });
     }
 
-    const blogs = await prisma.blog.findMany({
-      where:   { authorId: author.id, isPublished: true },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true, title: true, slug: true, content: true,
-        bannerImage: true, image: true, category: true, destination: true,
-        tags: true, readtime: true, createdAt: true, publishedDate: true,
-      },
-    });
+    const blogs = await authorService.findPublishedBlogsByAuthor(author.id);
 
     res.json({ success: true, author, blogs });
   } catch (err) {
@@ -245,7 +208,7 @@ export const getAuthorWithBlogs = async (req, res) => {
 ══════════════════════════════════════ */
 export const deleteAuthor = async (req, res) => {
   try {
-    await prisma.author.delete({ where: { id: req.params.id } });
+    await authorService.deleteAuthor(req.params.id);
     res.json({ success: true, message: "Author deleted" });
   } catch (err) {
     if (err.code === "P2025") {

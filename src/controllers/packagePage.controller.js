@@ -2,13 +2,13 @@
 // GET  /api/package-page → package listing page content
 // POST /api/package-page → save
 
-import prisma from "../config/prisma.js";
+import * as packagePageService from "../lib/services/packagePage.service.js";
 import { cleanHTML, parseSeo, parseBody, fileUrl } from "../utils/helpers.js";
 
 /* ── GET /api/package-page ── */
 export const getPackagePage = async (req, res) => {
   try {
-    const page = await prisma.packagePage.findUnique({ where: { slug: "package_page" } });
+    const page = await packagePageService.getPackagePage("package_page");
     res.json({ success: true, data: page || { slug: "package_page" } });
   } catch (err) {
     console.error("❌ getPackagePage:", err.message);
@@ -40,11 +40,7 @@ export const savePackagePage = async (req, res) => {
       }
     });
 
-    const updated = await prisma.packagePage.upsert({
-      where:  { slug: "package_page" },
-      update: payload,
-      create: payload,
-    });
+    const updated = await packagePageService.upsertPackagePage("package_page", payload);
 
     res.json({ success: true, message: "Package page settings saved", data: updated });
   } catch (err) {

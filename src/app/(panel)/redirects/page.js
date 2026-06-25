@@ -1,7 +1,12 @@
-
 import RedirectsAdmin from '@/screens/PagesContent/RedirectsAdmin.jsx';
-import config from '@/lib/panel-config';
+import { findAllRedirects } from '@/lib/services/redirect.service';
 
-export default function Page() {
-  return <RedirectsAdmin config={config} />;
+// Live admin list — render per request, never statically prerender / cache.
+export const dynamic = 'force-dynamic';
+
+export default async function Page() {
+  // Same query the old GET /api/redirects returned: all redirects, orderBy
+  // oldSlug asc, response array. Mutations stay client-side.
+  const initialRedirects = await findAllRedirects();
+  return <RedirectsAdmin initialRedirects={initialRedirects} />;
 }

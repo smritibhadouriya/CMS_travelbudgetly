@@ -1,4 +1,4 @@
-import prisma from '../config/prisma.js'
+import * as newsletterService from '../lib/services/newsletter.service.js'
 
 /* ── Subscribe ──────────────────────────────────────────────── */
 export const subscribe = async (req, res) => {
@@ -8,24 +8,20 @@ export const subscribe = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Valid email is required' })
     }
 
-    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress || ''
     const normalizedEmail = email.toLowerCase().trim()
 
-    // Already subscribed and active
-    const existing = await prisma.newsletter.findUnique({ where: { email: normalizedEmail } })
+    // Already subscribed and active (active = not unsubscribed)
+    const existing = await newsletterService.findSubscriberByEmail(normalizedEmail)
     if (existing) {
-      if (existing.isActive) {
+      if (existing.unsubscribedAt === null) {
         return res.status(409).json({ success: false, message: 'Email already subscribed' })
       }
       // Re-subscribe if previously unsubscribed
-      await prisma.newsletter.update({
-        where: { email: normalizedEmail },
-        data:  { isActive: true, unsubscribedAt: null, subscribedAt: new Date() },
-      })
+      await newsletterService.reactivateSubscriber(normalizedEmail)
       return res.status(200).json({ success: true, message: 'Re-subscribed successfully' })
     }
 
-    const subscriber = await prisma.newsletter.create({ data: { email: normalizedEmail, ip } })
+    const subscriber = await newsletterService.createSubscriber({ email: normalizedEmail })
     return res.status(201).json({
       success: true,
       message: 'Subscribed successfully',
@@ -47,15 +43,12 @@ export const unsubscribe = async (req, res) => {
     if (!email) return res.status(400).json({ success: false, message: 'Email is required' })
 
     const normalizedEmail = email.toLowerCase().trim()
-    const subscriber = await prisma.newsletter.findUnique({ where: { email: normalizedEmail } })
+    const subscriber = await newsletterService.findSubscriberByEmail(normalizedEmail)
     if (!subscriber) {
       return res.status(404).json({ success: false, message: 'Email not found' })
     }
 
-    await prisma.newsletter.update({
-      where: { email: normalizedEmail },
-      data:  { isActive: false, unsubscribedAt: new Date() },
-    })
+    await newsletterService.deactivateSubscriber(normalizedEmail)
 
     return res.status(200).json({ success: true, message: 'Unsubscribed successfully' })
   } catch (err) {
@@ -74,13 +67,11 @@ export const getAllSubscribers = async (req, res) => {
     if (status === 'inactive') where.isActive = false
 
     const [total, subscribers] = await Promise.all([
-      prisma.newsletter.count({ where }),
-      prisma.newsletter.findMany({
+      newsletterService.countSubscribers(where),
+      newsletterService.findSubscribers({
         where,
-        orderBy: { subscribedAt: 'desc' },
-        skip:    (Number(page) - 1) * Number(limit),
-        take:    Number(limit),
-        select:  { id: true, email: true, isActive: true, subscribedAt: true, unsubscribedAt: true, ip: true, createdAt: true },
+        skip: (Number(page) - 1) * Number(limit),
+        take: Number(limit),
       }),
     ])
 
@@ -103,7 +94,7 @@ export const getAllSubscribers = async (req, res) => {
 export const deleteSubscriber = async (req, res) => {
   try {
     const { id } = req.params
-    await prisma.newsletter.delete({ where: { id } })
+    await newsletterService.deleteSubscriber(id)
     return res.status(200).json({ success: true, message: 'Deleted successfully' })
   } catch (err) {
     if (err.code === "P2025") return res.status(404).json({ success: false, message: 'Subscriber not found' })
@@ -118,10 +109,10 @@ export const getStats = async (req, res) => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
 
     const [total, active, inactive, newThisWeek] = await Promise.all([
-      prisma.newsletter.count(),
-      prisma.newsletter.count({ where: { isActive: true } }),
-      prisma.newsletter.count({ where: { isActive: false } }),
-      prisma.newsletter.count({ where: { subscribedAt: { gte: sevenDaysAgo } } }),
+      newsletterService.countSubscribers(),
+      newsletterService.countSubscribers({ isActive: true }),
+      newsletterService.countSubscribers({ isActive: false }),
+      newsletterService.countSubscribers({ subscribedAt: { gte: sevenDaysAgo } }),
     ])
 
     return res.status(200).json({

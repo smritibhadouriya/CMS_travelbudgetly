@@ -539,7 +539,7 @@
 
 
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 const VITE_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api";
@@ -612,9 +612,12 @@ const JSON_LD_TEMPLATES = {
   }
 };
 
-export default function SeoAdmin() {
-  const [pages,      setPages]      = useState([]);
-  const [loading,    setLoading]    = useState(true);
+export default function SeoAdmin({ initialData = [] }) {
+  // Initial SEO rows come from the Server Component (service → Prisma), not
+  // axios. Refresh button + optimistic save still update client-side.
+  const [pages,      setPages]      = useState(initialData);
+  const [loading,    setLoading]    = useState(false);
+  const didMountRef = useRef(false);   // skip the initial load() (use seeded data)
   const [search,     setSearch]     = useState("");
   const [group,      setGroup]      = useState("All");
   const [editing,    setEditing]    = useState(null);
@@ -637,7 +640,12 @@ export default function SeoAdmin() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Initial rows arrive via the `initialData` prop (server-fetched); skip the
+  // mount fetch. `load` stays wired to the Refresh button + post-save patch.
+  useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return; }
+    load();
+  }, [load]);
 
   const filtered = pages.filter(p => {
     const mg = group === "All" || p.group === group;

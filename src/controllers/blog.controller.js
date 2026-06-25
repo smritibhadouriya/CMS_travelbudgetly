@@ -1,11 +1,6 @@
 // backend/controllers/blog.controller.js
-import prisma from "../config/prisma.js";
+import * as blogService from '../lib/services/blog.service.js';
 import { normalizeImage, parseBody, fileUrl } from "../utils/helpers.js";
-
-/* author fields ko populate karne ke liye reusable select */
-const AUTHOR_SELECT = {
-  select: { id: true, name: true, email: true, image: true, bio: true, designation: true, socialLinks: true },
-};
 
 /* ── Slug helpers ── */
 const toSlug = (t = "") =>
@@ -13,19 +8,6 @@ const toSlug = (t = "") =>
     .replace(/[^\w\s-]/g, "")
     .replace(/[\s_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
-
-const uniqueSlug = async (title, excludeId = null) => {
-  let base = toSlug(title), n = 0;
-  while (true) {
-    const s = n === 0 ? base : `${base}-${n}`;
-    const existing = await prisma.blog.findFirst({
-      where: { slug: s, ...(excludeId ? { id: { not: excludeId } } : {}) },
-      select: { id: true },
-    });
-    if (!existing) return s;
-    n++;
-  }
-};
 
 /* ── Auto SEO ── */
 const stripHtml = (html = "") => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -139,14 +121,8 @@ export const getBlogs = async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [docs, total] = await Promise.all([
-      prisma.blog.findMany({
-        where,
-        include: { author: AUTHOR_SELECT },
-        orderBy: [{ order: "asc" }, { publishedDate: "desc" }],
-        skip,
-        take: +limit,
-      }),
-      prisma.blog.count({ where }),
+      blogService.listBlogs({ where, skip, take: +limit }),
+      blogService.countBlogs(where),
     ]);
 
     res.json({
@@ -159,24 +135,14 @@ export const getBlogs = async (req, res) => {
 
 export const getFeaturedBlogs = async (_q, res) => {
   try {
-    const docs = await prisma.blog.findMany({
-      where:   { isFeatured: true, isPublished: true },
-      include: { author: AUTHOR_SELECT },
-      orderBy: [{ order: "asc" }, { publishedDate: "desc" }],
-      take:    6,
-    });
+    const docs = await blogService.listFeaturedBlogs();
     res.json({ success: true, data: docs });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
 export const getTopPicks = async (_q, res) => {
   try {
-    const docs = await prisma.blog.findMany({
-      where:   { isPublished: true },
-      include: { author: AUTHOR_SELECT },
-      orderBy: [{ order: "asc" }, { publishedDate: "desc" }],
-      take:    3,
-    });
+    const docs = await blogService.listTopPicks();
     res.json({ success: true, data: docs });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
@@ -184,11 +150,7 @@ export const getTopPicks = async (_q, res) => {
 export const getBlogBySlug = async (req, res) => {
   try {
     // increment views + return; throws P2025 if slug not found
-    const doc = await prisma.blog.update({
-      where:   { slug: req.params.slug },
-      data:    { views: { increment: 1 } },
-      include: { author: AUTHOR_SELECT },
-    });
+    const doc = await blogService.findBlogBySlugAndIncrementViews(req.params.slug);
     res.json({ success: true, data: doc });
   } catch (e) {
     if (e.code === "P2025") return res.status(404).json({ success: false, message: "Not found" });
@@ -198,10 +160,7 @@ export const getBlogBySlug = async (req, res) => {
 
 export const getBlogById = async (req, res) => {
   try {
-    const doc = await prisma.blog.findUnique({
-      where:   { id: req.params.id },
-      include: { author: AUTHOR_SELECT },
-    });
+    const doc = await blogService.findBlogById(req.params.id);
     if (!doc) return res.status(404).json({ success: false, message: "Not found" });
     res.json({ success: true, data: doc });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -213,14 +172,8 @@ export const getBlogsByCategory = async (req, res) => {
     const skip  = (parseInt(page) - 1) * parseInt(limit);
     const where = { category: req.params.category, isPublished: true };
     const [docs, total] = await Promise.all([
-      prisma.blog.findMany({
-        where,
-        include: { author: AUTHOR_SELECT },
-        orderBy: { publishedDate: "desc" },
-        skip,
-        take: +limit,
-      }),
-      prisma.blog.count({ where }),
+      blogService.listBlogsByWhere({ where, skip, take: +limit }),
+      blogService.countBlogs(where),
     ]);
     res.json({
       success: true,
@@ -236,14 +189,8 @@ export const getBlogsByTag = async (req, res) => {
     const skip  = (parseInt(page) - 1) * parseInt(limit);
     const where = { tags: { has: req.params.tag }, isPublished: true };
     const [docs, total] = await Promise.all([
-      prisma.blog.findMany({
-        where,
-        include: { author: AUTHOR_SELECT },
-        orderBy: { publishedDate: "desc" },
-        skip,
-        take: +limit,
-      }),
-      prisma.blog.count({ where }),
+      blogService.listBlogsByWhere({ where, skip, take: +limit }),
+      blogService.countBlogs(where),
     ]);
     res.json({
       success: true,
@@ -261,7 +208,7 @@ export const createBlog = async (req, res) => {
 
     if (!payload.title) return res.status(400).json({ success: false, message: "Title is required" });
 
-    payload.slug = await uniqueSlug(payload.title);
+    payload.slug = await blogService.uniqueSlug(payload.title);
 
     payload.seo = buildSeo(
       payload._rawSeo,
@@ -273,10 +220,7 @@ export const createBlog = async (req, res) => {
 
     if (payload.isPublished) payload.publishedDate = new Date();
 
-    const doc = await prisma.blog.create({
-      data:    payload,
-      include: { author: AUTHOR_SELECT },
-    });
+    const doc = await blogService.createBlog(payload);
 
     res.status(201).json({ success: true, message: "Blog created", data: doc });
   } catch (e) {
@@ -292,9 +236,9 @@ export const updateBlog = async (req, res) => {
     const raw      = parseBody(req);
     const payload  = buildBlogPayload(raw, req.files || []);
 
-    if (payload.title) payload.slug = await uniqueSlug(payload.title, req.params.id);
+    if (payload.title) payload.slug = await blogService.uniqueSlug(payload.title, req.params.id);
 
-    const existing = await prisma.blog.findUnique({ where: { id: req.params.id } });
+    const existing = await blogService.findBlogByIdRaw(req.params.id);
     if (!existing) return res.status(404).json({ success: false, message: "Blog not found" });
 
     payload.seo = buildSeo(
@@ -307,11 +251,7 @@ export const updateBlog = async (req, res) => {
 
     payload.updatedDate = new Date();
 
-    const doc = await prisma.blog.update({
-      where:   { id: req.params.id },
-      data:    payload,
-      include: { author: AUTHOR_SELECT },
-    });
+    const doc = await blogService.updateBlog(req.params.id, payload);
 
     res.json({ success: true, message: "Blog updated", data: doc });
   } catch (e) {
@@ -326,7 +266,7 @@ export const updateBlog = async (req, res) => {
 
 export const deleteBlog = async (req, res) => {
   try {
-    await prisma.blog.delete({ where: { id: req.params.id } });
+    await blogService.deleteBlog(req.params.id);
     res.json({ success: true, message: "Blog deleted" });
   } catch (e) {
     if (e.code === "P2025") return res.status(404).json({ success: false, message: "Not found" });
@@ -336,18 +276,14 @@ export const deleteBlog = async (req, res) => {
 
 export const togglePublish = async (req, res) => {
   try {
-    const doc = await prisma.blog.findUnique({ where: { id: req.params.id } });
+    const doc = await blogService.findBlogByIdRaw(req.params.id);
     if (!doc) return res.status(404).json({ success: false, message: "Not found" });
 
     const isPublished = !doc.isPublished;
-    const updated = await prisma.blog.update({
-      where: { id: req.params.id },
-      data: {
-        isPublished,
-        publishedDate: isPublished && !doc.publishedDate ? new Date() : doc.publishedDate,
-        updatedDate:   new Date(),
-      },
-      include: { author: AUTHOR_SELECT },
+    const updated = await blogService.updateBlog(req.params.id, {
+      isPublished,
+      publishedDate: isPublished && !doc.publishedDate ? new Date() : doc.publishedDate,
+      updatedDate:   new Date(),
     });
     res.json({ success: true, data: updated });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -355,13 +291,10 @@ export const togglePublish = async (req, res) => {
 
 export const toggleFeatured = async (req, res) => {
   try {
-    const doc = await prisma.blog.findUnique({ where: { id: req.params.id } });
+    const doc = await blogService.findBlogByIdRaw(req.params.id);
     if (!doc) return res.status(404).json({ success: false, message: "Not found" });
 
-    const updated = await prisma.blog.update({
-      where: { id: req.params.id },
-      data:  { isFeatured: !doc.isFeatured, updatedDate: new Date() },
-    });
+    const updated = await blogService.updateBlogBasic(req.params.id, { isFeatured: !doc.isFeatured, updatedDate: new Date() });
     res.json({ success: true, data: updated });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };

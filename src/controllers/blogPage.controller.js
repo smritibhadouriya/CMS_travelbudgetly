@@ -2,13 +2,13 @@
 // GET  /api/blogpage → blog listing page content
 // POST /api/blogpage → save
 
-import prisma from "../config/prisma.js";
+import * as blogPageService from "../lib/services/blogPage.service.js";
 import { cleanHTML, parseSeo, parseBody, fileUrl } from "../utils/helpers.js";
 
 /* ── GET /api/blogpage ── */
 export const getBlogPage = async (req, res) => {
   try {
-    const page = await prisma.blogPage.findUnique({ where: { slug: "blogpage" } });
+    const page = await blogPageService.getBlogPage("blogpage");
     res.json({ success: true, data: page || { slug: "blogpage" } });
   } catch (err) {
     console.error("❌ getBlogPage:", err.message);
@@ -39,11 +39,7 @@ export const saveBlogPage = async (req, res) => {
       }
     });
 
-    const updated = await prisma.blogPage.upsert({
-      where:  { slug: "blogpage" },
-      update: payload,
-      create: payload,
-    });
+    const updated = await blogPageService.upsertBlogPage("blogpage", payload);
 
     res.json({ success: true, message: "Blog page settings saved", data: updated });
   } catch (err) {

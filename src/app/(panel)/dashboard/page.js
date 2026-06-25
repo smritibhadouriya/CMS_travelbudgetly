@@ -1,7 +1,10 @@
-
 import DashboardView from '@/screens/DashboardView.jsx';
-import config from '@/lib/panel-config';
+import { getDashboardStats } from '@/lib/services/dashboard.service';
 
-export default function Page() {
-  return <DashboardView config={config} />;
+// Live admin stats — render per request, never statically prerender / cache.
+export const dynamic = 'force-dynamic';
+
+export default async function Page() {
+  const stats = await getDashboardStats();
+  return <DashboardView stats={stats} />;
 }

@@ -1,7 +1,12 @@
-
 import CommentsPage from '@/screens/Comment/CommentPage.jsx';
-import config from '@/lib/panel-config';
+import { getGroupedComments } from '@/lib/services/comment.service';
 
-export default function Page() {
-  return <CommentsPage config={config} />;
+// Live admin list — render per request, never statically prerender / cache.
+export const dynamic = 'force-dynamic';
+
+export default async function Page() {
+  // Mirrors the client's first call: grouped, default tab "pending", "latest".
+  // Filter/tab/search/date changes + the 45s poll still refetch client-side.
+  const initialComments = await getGroupedComments({ status: 'pending', sort: 'latest' });
+  return <CommentsPage initialComments={initialComments} />;
 }

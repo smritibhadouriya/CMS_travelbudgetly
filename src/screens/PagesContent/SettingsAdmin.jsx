@@ -2,9 +2,9 @@
 
 
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "react-toastify";
-import { getSettings, saveSettings } from "../../service/api";
+import { saveSettings } from "../../service/api";
 import { SectionCard, Input, Textarea } from "../../components/CommonUI/FormComponents";
 const VITE_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"; // ✅ same config jo api.js use karta hai
 
@@ -23,19 +23,15 @@ const blank = () => ({
   googleTagManagerId: "",
 });
 
-export default function SettingsAdmin() {
-  const [data,         setData]         = useState(blank());
+export default function SettingsAdmin({ initialData = {} }) {
+  // Initial settings come from the Server Component (service → Prisma), not
+  // axios. Seed mirrors the old mount merge: { ...blank(), ...fetched }.
+  const [data,         setData]         = useState({ ...blank(), ...(initialData || {}) });
   const [saving,       setSaving]       = useState(false);
   const [sitemapInput, setSitemapInput] = useState("");
 
   // ✅ FIX: config.js se aata hai, hardcoded nahi
   const BASE = VITE_BACKEND_URL.replace("/api", "");
-
-  useEffect(() => {
-    getSettings()
-      .then(r => { if (r.data?.data) setData(d => ({ ...d, ...r.data.data })); })
-      .catch(() => toast.error("Failed to load settings"));
-  }, []);
 
   const set       = (key, val)         => setData(p => ({ ...p, [key]: val }));
   const setNested = (key, field, val)  => setData(p => ({ ...p, [key]: { ...p[key], [field]: val } }));

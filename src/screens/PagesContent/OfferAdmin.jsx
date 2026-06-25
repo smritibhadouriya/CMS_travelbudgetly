@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { toast } from "react-toastify";
 import { SectionCard, Divider, Input, Textarea, Toggle } from "../../components/CommonUI/UI.jsx";
 import ImagePicker from "../../components/CommonUI/ImagePicker.jsx";
@@ -11,9 +11,10 @@ const mapImg   = (raw) => ({ url:(raw?.src||raw?.url||""), file:null, _preview:n
 const cleanImg = (i)   => ({ src:(i?.file instanceof File)?"":(i?.url||""), alt:i?.alt||"", title:i?.title||"" });
 const appendImg = (fd, key, img) => { if (img?.file instanceof File) fd.append(key, img.file); };
 
-export default function OfferAdmin() {
-  const [offers, setOffers]   = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function OfferAdmin({ initialOffers = [] }) {
+  // Initial list comes from the Server Component (service → Prisma), not axios.
+  const [offers, setOffers]   = useState(initialOffers);
+  const [loading, setLoading] = useState(false);
   const [loadErr, setLoadErr] = useState(null);
   const [saving,  setSaving]  = useState(false);
   const inFlight = useRef(false);
@@ -42,7 +43,8 @@ export default function OfferAdmin() {
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Initial offers arrive via the `initialOffers` prop (server-fetched).
+  // `load` is retained for post-mutation refresh (create/update/delete) below.
 
   const resetForm = () => {
     setEditId(null);

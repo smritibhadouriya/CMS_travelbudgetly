@@ -1,6 +1,6 @@
 // controllers/package.controller.js
 // Travel packages CRUD — maps 1:1 to the `Package` model.
-import prisma from "../config/prisma.js";
+import * as packageService from '../lib/services/package.service.js';
 import { parseSeo, parseBody, fileUrl } from "../utils/helpers.js";
 import slugify from "slugify";
 
@@ -107,10 +107,9 @@ export const getPackages = async (req, res) => {
     ];
 
     const [total, packages] = await Promise.all([
-      prisma.package.count({ where }),
-      prisma.package.findMany({
+      packageService.countPackages(where),
+      packageService.listPackages({
         where,
-        orderBy: [{ isFeatured: "desc" }, { order: "asc" }, { createdAt: "desc" }],
         skip: (+page - 1) * +limit,
         take: +limit,
       }),
@@ -126,7 +125,7 @@ export const getPackages = async (req, res) => {
 /* ── GET ONE by slug ── */
 export const getPackage = async (req, res) => {
   try {
-    const pkg = await prisma.package.findUnique({ where: { slug: req.params.slug } });
+    const pkg = await packageService.findPackageBySlug(req.params.slug);
     if (!pkg) return res.status(404).json({ success: false, message: "Package not found" });
     res.json({ success: true, data: pkg });
   } catch (err) {
@@ -142,7 +141,7 @@ export const createPackage = async (req, res, next) => {
     const payload = buildPackagePayload(raw, req.files || []);
     if (!payload.title) return res.status(400).json({ success: false, message: "Title is required" });
 
-    const pkg = await prisma.package.create({ data: payload });
+    const pkg = await packageService.createPackage(payload);
     return res.status(201).json({ success: true, message: "Package created successfully", data: pkg });
   } catch (err) {
     if (err.code === "P2002") {
@@ -158,7 +157,7 @@ export const updatePackage = async (req, res) => {
   try {
     const raw     = parseBody(req);
     const payload = buildPackagePayload(raw, req.files || []);
-    const pkg = await prisma.package.update({ where: { id: req.params.id }, data: payload });
+    const pkg = await packageService.updatePackage(req.params.id, payload);
     res.json({ success: true, message: "Package updated successfully", data: pkg });
   } catch (err) {
     if (err.code === "P2025") return res.status(404).json({ success: false, message: "Package not found" });
@@ -171,7 +170,7 @@ export const updatePackage = async (req, res) => {
 /* ── DELETE ── */
 export const deletePackage = async (req, res) => {
   try {
-    await prisma.package.delete({ where: { id: req.params.id } });
+    await packageService.deletePackage(req.params.id);
     res.json({ success: true, message: "Package deleted successfully" });
   } catch (err) {
     if (err.code === "P2025") return res.status(404).json({ success: false, message: "Package not found" });

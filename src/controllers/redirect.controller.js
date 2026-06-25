@@ -1,6 +1,6 @@
 // controllers/redirect.controller.js
 // Manage URL redirects — maps 1:1 to the `Redirect` model.
-import prisma from "../config/prisma.js";
+import * as redirectService from "../lib/services/redirect.service.js";
 import { parseBody } from "../utils/helpers.js";
 
 const normalizeSlug = (s = "") => "/" + String(s || "").trim().replace(/^\/+|\/+$/g, "");
@@ -8,7 +8,7 @@ const normalizeSlug = (s = "") => "/" + String(s || "").trim().replace(/^\/+|\/+
 /* ── GET ALL ── */
 export const getRedirects = async (req, res) => {
   try {
-    const redirects = await prisma.redirect.findMany({ orderBy: { oldSlug: "asc" } });
+    const redirects = await redirectService.findAllRedirects();
     res.json({ success: true, data: redirects });
   } catch (err) {
     console.error("❌ getRedirects:", err.message);
@@ -26,9 +26,7 @@ export const createRedirect = async (req, res) => {
       return res.status(400).json({ success: false, message: "oldSlug and newSlug are required" });
     }
 
-    const redirect = await prisma.redirect.create({
-      data: { oldSlug, newSlug, pageType: raw.pageType?.trim() || null },
-    });
+    const redirect = await redirectService.createRedirect({ oldSlug, newSlug, pageType: raw.pageType?.trim() || null });
     res.status(201).json({ success: true, message: "Redirect created", data: redirect });
   } catch (err) {
     console.error("❌ createRedirect:", err.message);
@@ -45,7 +43,7 @@ export const updateRedirect = async (req, res) => {
     if (raw.newSlug !== undefined)  data.newSlug  = normalizeSlug(raw.newSlug);
     if (raw.pageType !== undefined) data.pageType = raw.pageType?.trim() || null;
 
-    const redirect = await prisma.redirect.update({ where: { id: req.params.id }, data });
+    const redirect = await redirectService.updateRedirect(req.params.id, data);
     res.json({ success: true, message: "Redirect updated", data: redirect });
   } catch (err) {
     if (err.code === "P2025") return res.status(404).json({ success: false, message: "Redirect not found" });
@@ -57,7 +55,7 @@ export const updateRedirect = async (req, res) => {
 /* ── DELETE ── */
 export const deleteRedirect = async (req, res) => {
   try {
-    await prisma.redirect.delete({ where: { id: req.params.id } });
+    await redirectService.deleteRedirect(req.params.id);
     res.json({ success: true, message: "Redirect deleted" });
   } catch (err) {
     if (err.code === "P2025") return res.status(404).json({ success: false, message: "Redirect not found" });

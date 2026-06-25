@@ -1,6 +1,6 @@
 // controllers/offer.controller.js
 // Special-offer banners — maps 1:1 to the `Offer` model.
-import prisma from "../config/prisma.js";
+import * as offerService from '../lib/services/offer.service.js';
 import { normalizeImage, parseBody, fileUrl } from "../utils/helpers.js";
 import slugify from "slugify";
 
@@ -31,7 +31,7 @@ export const getOffers = async (req, res) => {
     const where = {};
     if (isPublished !== undefined) where.isPublished = isPublished === "true";
 
-    const offers = await prisma.offer.findMany({ where, orderBy: { createdAt: "desc" } });
+    const offers = await offerService.listOffers(where);
     res.json({ success: true, data: offers });
   } catch (err) {
     console.error("❌ getOffers:", err.message);
@@ -42,7 +42,7 @@ export const getOffers = async (req, res) => {
 /* ── GET ONE by slug ── */
 export const getOffer = async (req, res) => {
   try {
-    const offer = await prisma.offer.findUnique({ where: { slug: req.params.slug } });
+    const offer = await offerService.findOfferBySlug(req.params.slug);
     if (!offer) return res.status(404).json({ success: false, message: "Offer not found" });
     res.json({ success: true, data: offer });
   } catch (err) {
@@ -57,7 +57,7 @@ export const createOffer = async (req, res) => {
     const payload = buildOfferPayload(raw, req.files || []);
     if (!payload.slug) return res.status(400).json({ success: false, message: "Heading or slug is required" });
 
-    const offer = await prisma.offer.create({ data: payload });
+    const offer = await offerService.createOffer(payload);
     res.status(201).json({ success: true, message: "Offer created", data: offer });
   } catch (err) {
     if (err.code === "P2002") return res.status(400).json({ success: false, message: "An offer with this slug already exists." });
@@ -71,7 +71,7 @@ export const updateOffer = async (req, res) => {
   try {
     const raw     = parseBody(req);
     const payload = buildOfferPayload(raw, req.files || []);
-    const offer = await prisma.offer.update({ where: { id: req.params.id }, data: payload });
+    const offer = await offerService.updateOffer(req.params.id, payload);
     res.json({ success: true, message: "Offer updated", data: offer });
   } catch (err) {
     if (err.code === "P2025") return res.status(404).json({ success: false, message: "Offer not found" });
@@ -84,7 +84,7 @@ export const updateOffer = async (req, res) => {
 /* ── DELETE ── */
 export const deleteOffer = async (req, res) => {
   try {
-    await prisma.offer.delete({ where: { id: req.params.id } });
+    await offerService.deleteOffer(req.params.id);
     res.json({ success: true, message: "Offer deleted" });
   } catch (err) {
     if (err.code === "P2025") return res.status(404).json({ success: false, message: "Offer not found" });

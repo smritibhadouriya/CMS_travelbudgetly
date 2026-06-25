@@ -1,13 +1,13 @@
 'use client';
 // admin/src/pages/AuthorsPage.jsx
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "@/lib/nav";
 import { toast } from "react-toastify";
 import {
   FiEdit2, FiTrash2, FiArrowUp, FiArrowDown, FiSearch,
   FiTwitter, FiLinkedin, FiInstagram, FiFacebook, FiGlobe, FiX,FiMail, FiBriefcase, FiCalendar,   
 } from "react-icons/fi";
-import { getAuthors, deleteAuthor, updateAuthor } from "../../service/api";
+import { deleteAuthor, updateAuthor } from "../../service/api";
 const VITE_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api";
 
 const BASE_URL = (VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
@@ -150,11 +150,12 @@ function AuthorModal({ author, onClose, onEdit }) {
     </div>
   );
 }
-export default function AuthorsPage() {
+export default function AuthorsPage({ initialAuthors = [] }) {
   const navigate = useNavigate();
 
-  const [authorList,    setAuthorList]    = useState([]);
-  const [loading,       setLoading]       = useState(true);
+  // Initial list comes from the Server Component (service → Prisma), not axios.
+  const [authorList,    setAuthorList]    = useState(initialAuthors);
+  const [loading,       setLoading]       = useState(false);
   const [deleteTarget,  setDeleteTarget]  = useState(null);
   const [deletingId,    setDeletingId]    = useState(null);
 
@@ -173,20 +174,9 @@ export default function AuthorsPage() {
   const [selected,      setSelected]      = useState(new Set());
   const [bulkDeleteIds, setBulkDeleteIds] = useState([]);
 
-  /* ── Fetch ── */
-  const fetchAuthors = async () => {
-    try {
-      setLoading(true);
-      const res = await getAuthors();
-      setAuthorList(res.data?.authors || []);
-    } catch {
-      toast.error("Failed to load authors");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchAuthors(); }, []);
+  // Initial author list now arrives via the `initialAuthors` prop
+  // (server-fetched). No on-mount axios read. Mutations below still patch
+  // local state optimistically, exactly as before.
 
   /* ── Patch local state ── */
   const patchLocal = (id, changes) =>

@@ -6,7 +6,7 @@
 // destination / package / offer cards are NOT stored here — they come from the
 // Package and Offer models. This page only holds section toggles + headings.
 
-import prisma from "../config/prisma.js";
+import * as homeService from "../lib/services/home.service.js";
 import { cleanHTML, normalizeImage, parseSeo, parseBody, fileUrl } from "../utils/helpers.js";
 
 const bool = (v, def = true) => (v === undefined || v === null ? def : v !== false && v !== "false");
@@ -16,7 +16,7 @@ const bool = (v, def = true) => (v === undefined || v === null ? def : v !== fal
 ══════════════════════════════════════ */
 export const getHomePage = async (req, res) => {
   try {
-    const page = await prisma.home.findUnique({ where: { slug: "home" } });
+    const page = await homeService.getHome("home");
     res.json({ success: true, data: page || { slug: "home" } });
   } catch (err) {
     console.error("❌ getHomePage:", err.message);
@@ -122,11 +122,7 @@ export const saveHomePage = async (req, res) => {
       if (file.fieldname === "seoImage")         payload.seo.image        = normalizeImage({ src });
     });
 
-    const updated = await prisma.home.upsert({
-      where:  { slug: "home" },
-      update: payload,
-      create: payload,
-    });
+    const updated = await homeService.upsertHome("home", payload);
 
     res.json({ success: true, message: "Home page saved", data: updated });
   } catch (err) {

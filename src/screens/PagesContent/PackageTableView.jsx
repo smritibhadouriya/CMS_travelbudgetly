@@ -1,9 +1,9 @@
 'use client';
 // src/screens/PagesContent/PackageTableView.jsx
 import { useNavigate } from '@/lib/nav';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { toast } from 'react-toastify';
-import { getPackages, deletePackage } from '../../service/api';
+import { deletePackage } from '../../service/api';
 import { FiEye, FiEdit2, FiTrash2, FiSearch } from 'react-icons/fi';
 
 const getThumb = (p) => {
@@ -14,33 +14,14 @@ const getThumb = (p) => {
   return typeof src === 'string' ? src : (src.src || src.url || "");
 };
 
-export default function PackageTableView() {
+export default function PackageTableView({ initialPackages = [] }) {
   const navigate = useNavigate();
 
-  const [list,      setList]      = useState([]);
-  const [loading,   setLoading]   = useState(true);
+  // Initial list comes from the Server Component (service → Prisma), not axios.
+  const [list,      setList]      = useState(initialPackages);
+  const [loading,   setLoading]   = useState(false);
   const [search,    setSearch]    = useState('');
   const [deleteTgt, setDeleteTgt] = useState(null);
-
-  const fetchPackages = async (signal) => {
-    try {
-      setLoading(true);
-      const r = await getPackages({ limit: 500 });
-      if (signal?.aborted) return;
-      setList(Array.isArray(r?.data?.data) ? r.data.data : []);
-    } catch (e) {
-      if (e?.name === 'CanceledError' || e?.name === 'AbortError') return;
-      toast.error('Failed to load packages');
-    } finally {
-      if (!signal?.aborted) setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchPackages(controller.signal);
-    return () => controller.abort();
-  }, []);
 
   const doDelete = async () => {
     if (!deleteTgt) return;
