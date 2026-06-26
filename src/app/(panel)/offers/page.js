@@ -1,4 +1,4 @@
-import OfferAdmin from '@/screens/PagesContent/OfferAdmin.jsx';
+import OfferAdmin from './OfferAdmin.jsx';
 import { listOffers } from '@/lib/services/offer.service';
 
 // Live admin list — render per request, never statically prerender / cache.

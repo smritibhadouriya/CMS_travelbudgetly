@@ -1,4 +1,4 @@
-import About from '@/screens/PagesContent/About.jsx';
+import About from './About.jsx';
 import { getAbout } from '@/lib/services/about.service';
 
 // Singleton config — render per request, never statically prerender / cache.

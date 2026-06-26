@@ -1,4 +1,49 @@
 import prisma from '@/config/prisma';
+import { fileUrl } from "@/lib/utils/url.js";
+
+/* ── request → payload transforms ── */
+export const parseJSON = (val) => {
+  try {
+    return typeof val === "string" ? JSON.parse(val) : val;
+  } catch {
+    return {};
+  }
+};
+
+const normalizeImage = (raw = {}) => ({
+  mode:  raw?.mode === "url" ? "url" : "upload",
+  src:   raw?.src   || "",
+  alt:   raw?.alt   || "",
+  title: raw?.title || "",
+});
+
+/* CREATE image mapping (verbatim from createAuthor). */
+export const buildAuthorImage = (imageData, imageFile) => ({
+  ...normalizeImage(imageData),
+  src: imageData?.mode === "url"
+    ? (imageData.src || "")
+    : imageFile
+      ? fileUrl(imageFile.path)
+      : "",
+});
+
+/* UPDATE image mapping (verbatim from updateAuthor — removal + existing fallback). */
+export const resolveAuthorImageUpdate = (imageData, imageFile, existingSrc = "") => {
+  const isRemoved =
+    imageData.mode !== "upload" &&
+    (imageData.src === "" || imageData.src === null);
+
+  return {
+    ...normalizeImage(imageData),
+    src: isRemoved
+      ? ""
+      : imageData.mode === "url"
+        ? (imageData.src || "")
+        : imageFile
+          ? fileUrl(imageFile.path)
+          : existingSrc,
+  };
+};
 
 /* ── slug helper ── */
 const toSlug = (text = "") =>

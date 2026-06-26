@@ -4,7 +4,7 @@
 // *optimistic* check only: presence of the httpOnly `token` cookie set at
 // login. Per the Next.js auth guide, proxy runs on the edge and on every
 // (incl. prefetched) request, so it must NOT decode/verify the JWT or hit the
-// DB here — the real verification lives in the API routes (auth.middleware.js).
+// DB here — the real verification lives in the API routes.
 import { NextResponse } from 'next/server';
 
 // Only this app route is reachable without a token.

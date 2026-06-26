@@ -1,25 +1,30 @@
-// Mirrors the inline handler in src/routes/auth.routes.js (logic unchanged).
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import prisma from '@/config/prisma.js';
-import { runRoute } from '@/lib/express-adapter';
+// app/api/auth/login/route.js
+// Native Next.js App Router handler.
+// Credential check stays in auth.service (verifyUserCredentials).
+//
+// The Set-Cookie string is built to match the prior cookie format byte-for-byte:
+//   token=<enc>; Max-Age=86400; Path=/; HttpOnly[; Secure]; SameSite=lax
 
-const login = async (req, res) => {
+import { NextResponse } from 'next/server';
+import jwt from 'jsonwebtoken';
+import * as authService from '@/lib/services/auth.service';
+
+/* ── POST /api/auth/login ── */
+export async function POST(req) {
+  // Parse JSON body (bad JSON → {})
+  let body = {};
+  try { body = await req.json(); } catch { body = {}; }
+
   try {
-    const { email, password } = req.body;
+    const { email, password } = body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password required' });
+      return new NextResponse(JSON.stringify({ message: 'Email and password required' }), { status: 400, headers: { 'content-type': 'application/json; charset=utf-8' } });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await authService.verifyUserCredentials(email, password);
     if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      return new NextResponse(JSON.stringify({ message: 'Invalid email or password' }), { status: 401, headers: { 'content-type': 'application/json; charset=utf-8' } });
     }
 
     const token = jwt.sign(
@@ -28,24 +33,14 @@ const login = async (req, res) => {
       { expiresIn: '1d' }
     );
 
-    // Save the JWT as an httpOnly cookie so protected API routes can read it
-    // (see auth.middleware.js -> req.cookies.token). httpOnly keeps it out of
-    // JS/XSS; Secure is enabled in production (HTTPS).
-    res.cookie('token', token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-      maxAge: 24 * 60 * 60 * 1000, // 1 day — matches the JWT expiry
-    });
+    // Save the JWT as an httpOnly cookie so protected API routes can read it.
+    let cookie = `token=${encodeURIComponent(token)}; Max-Age=86400; Path=/; HttpOnly`;
+    if (process.env.NODE_ENV === 'production') cookie += '; Secure';
+    cookie += '; SameSite=lax';
 
-    res.json({ token });
+    return new NextResponse(JSON.stringify({ token }), { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'set-cookie': cookie } });
   } catch (err) {
     console.error('LOGIN ERROR:', err);
-    res.status(500).json({ message: 'Login failed' });
+    return new NextResponse(JSON.stringify({ message: 'Login failed' }), { status: 500, headers: { 'content-type': 'application/json; charset=utf-8' } });
   }
-};
-
-export async function POST(req, ctx) {
-  return runRoute(req, ctx, login);
 }

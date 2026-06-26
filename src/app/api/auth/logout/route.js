@@ -1,12 +1,13 @@
-// Logout: clears the httpOnly `token` cookie set at login.
-import { runRoute } from '@/lib/express-adapter';
+// app/api/auth/logout/route.js
+// Native Next.js App Router handler.
+//
+// Clears the httpOnly `token` cookie. Set-Cookie string (cookie-clear format):
+//   token=; Max-Age=0; Path=/
 
-const logout = async (req, res) => {
-  // maxAge:0 -> the browser drops the cookie immediately.
-  res.clearCookie('token', { path: '/' });
-  res.json({ message: 'Logged out' });
-};
+import { NextResponse } from 'next/server';
 
-export async function POST(req, ctx) {
-  return runRoute(req, ctx, logout);
+/* ── POST /api/auth/logout ── */
+export async function POST() {
+  const cookie = 'token=; Max-Age=0; Path=/';
+  return new NextResponse(JSON.stringify({ message: 'Logged out' }), { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'set-cookie': cookie } });
 }

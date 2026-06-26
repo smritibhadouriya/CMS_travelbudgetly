@@ -1,4 +1,5 @@
 import prisma from '@/config/prisma';
+import { fileUrl } from "@/lib/utils/url.js";
 
 /* ── Static singleton page docs ── */
 export const getHomeDoc = () =>
@@ -44,17 +45,16 @@ export const updateBlogSeoBySlug = (slug, seo) =>
 export const updatePackageSeoBySlug = (slug, seo) =>
   prisma.package.updateMany({ where: { slug }, data: { seo } });
 
-/* ── Aggregated read for the SEO admin grid (Class-B). Mirrors the controller's
-   getAllSeo shaping EXACTLY so a Server Component can seed initialData without
-   the API hop. Additive & read-only — the controller keeps its own copy. ── */
+/* ── Aggregated read for the SEO admin grid: shapes each page's SEO + score so
+   a Server Component can seed initialData without the API hop. Read-only. ── */
 const SEO_PAGE_CONFIGS = [
-  { page: "home",         label: "Home Page",            group: "Pages", getDoc: getHomeDoc },
-  { page: "about",        label: "About Page",           group: "Pages", getDoc: getAboutDoc },
-  { page: "blogpage",     label: "Blog Listing Page",    group: "Pages", getDoc: getBlogPageDoc },
-  { page: "package_page", label: "Package Listing Page", group: "Pages", getDoc: getPackagePageDoc },
+  { page: "home",         label: "Home Page",            group: "Pages", getDoc: getHomeDoc,        saveDoc: saveHomeDoc },
+  { page: "about",        label: "About Page",           group: "Pages", getDoc: getAboutDoc,       saveDoc: saveAboutDoc },
+  { page: "blogpage",     label: "Blog Listing Page",    group: "Pages", getDoc: getBlogPageDoc,    saveDoc: saveBlogPageDoc },
+  { page: "package_page", label: "Package Listing Page", group: "Pages", getDoc: getPackagePageDoc, saveDoc: savePackagePageDoc },
 ];
 
-const calcSeoScore = (seo = {}) => {
+export const calcSeoScore = (seo = {}) => {
   let score = 0;
   if (seo.metaTitle?.trim())       score += 25;
   if (seo.metaDescription?.trim()) score += 25;
@@ -100,4 +100,70 @@ export const getAllSeoEntries = async () => {
   } catch (_) {}
 
   return results;
+};
+
+/* ── Build the SEO payload from parsed body (raw) + uploaded files. ── */
+export const buildSeoPayload = (raw, files = []) => {
+  const incomingSeo = raw.seo || {};
+
+  const seoPayload = {
+    metaTitle:       (incomingSeo.metaTitle       || "").trim(),
+    metaDescription: (incomingSeo.metaDescription || "").trim(),
+    metaKeywords:    Array.isArray(incomingSeo.metaKeywords) ? incomingSeo.metaKeywords : [],
+    canonicalUrl:    (incomingSeo.canonicalUrl    || "").trim(),
+    index:           incomingSeo.index  !== false,
+    follow:          incomingSeo.follow !== false,
+    jsonSchema:      (typeof incomingSeo.jsonSchema === "object" && incomingSeo.jsonSchema !== null) ? incomingSeo.jsonSchema : {},
+    image: {
+      mode:  incomingSeo.image?.mode  || "url",
+      src:   incomingSeo.image?.src   || "",
+      alt:   incomingSeo.image?.alt   || "",
+      title: incomingSeo.image?.title || "",
+    },
+  };
+
+  const imgFile = files.find((f) => f.fieldname === "seoImage");
+  if (imgFile) {
+    seoPayload.image = { mode: "upload", src: fileUrl(imgFile.path), alt: seoPayload.metaTitle || "", title: seoPayload.metaTitle || "" };
+  }
+
+  return seoPayload;
+};
+
+/* ── Resolve a page slug → its current SEO object.
+   Returns { found: false } for unknown static pages (the route maps to 404). ── */
+export const getSeoForPage = async (page) => {
+  if (page.startsWith("blog/")) {
+    const doc = await findBlogSeoBySlug(page.replace("blog/", ""));
+    return { found: true, seo: doc?.seo || {} };
+  }
+  if (page.startsWith("package/")) {
+    const doc = await findPackageSeoBySlug(page.replace("package/", ""));
+    return { found: true, seo: doc?.seo || {} };
+  }
+
+  const config = SEO_PAGE_CONFIGS.find((c) => c.page === page);
+  if (!config) return { found: false };
+
+  const doc = await config.getDoc();
+  return { found: true, seo: doc?.seo || {} };
+};
+
+/* ── Persist the SEO payload to the page's target.
+   Returns { found: false } for unknown static pages (the route maps to 404). ── */
+export const saveSeoForPage = async (page, seoPayload) => {
+  if (page.startsWith("blog/")) {
+    await updateBlogSeoBySlug(page.replace("blog/", ""), seoPayload);
+    return { found: true };
+  }
+  if (page.startsWith("package/")) {
+    await updatePackageSeoBySlug(page.replace("package/", ""), seoPayload);
+    return { found: true };
+  }
+
+  const config = SEO_PAGE_CONFIGS.find((c) => c.page === page);
+  if (!config) return { found: false };
+
+  await config.saveDoc(seoPayload);
+  return { found: true };
 };

@@ -1,4 +1,27 @@
 import prisma from '@/config/prisma';
+import slugify from "slugify";
+import { normalizeImage } from "@/lib/utils/image.js";
+import { fileUrl } from "@/lib/utils/url.js";
+import { bool } from "@/lib/utils/coerce.js";
+
+/* Build the Offer DB payload from parsed FormData (raw) + uploaded files. */
+export const buildOfferPayload = (raw, files = []) => {
+  const payload = {
+    slug:        raw.slug?.trim() || slugify(raw.Heading || raw.heading || "", { lower: true, strict: true }),
+    banner:      normalizeImage(raw.banner),
+    Heading:     (raw.Heading || raw.heading || "").trim(),
+    Subtext:     (raw.Subtext || raw.subtext || "").trim(),
+    isPublished: bool(raw.isPublished),
+  };
+
+  files.forEach((file) => {
+    if (file.fieldname === "banner") {
+      payload.banner = { src: fileUrl(file.path || ""), alt: payload.Heading || "", title: "" };
+    }
+  });
+
+  return payload;
+};
 
 /* ── List offers ── */
 export const listOffers = async (where) =>

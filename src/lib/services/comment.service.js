@@ -22,8 +22,8 @@ export const findCommentsWithBlog = (where, sortOrder) =>
     orderBy: { createdAt: sortOrder },
   });
 
-/* Build the admin-list `where` from query params (mirrors the controller). */
-const buildCommentWhere = ({ status, blogId, q, date } = {}) => {
+/* Build the admin-list `where` from query params (single source of truth). */
+export const buildCommentWhere = ({ status, blogId, q, date } = {}) => {
   const where = {};
   if (status) where.status = status;
   if (blogId) where.blogId = blogId;
@@ -45,11 +45,9 @@ const buildCommentWhere = ({ status, blogId, q, date } = {}) => {
   return where;
 };
 
-/* Grouped admin listing — same shape the controller's grouped branch returns
-   (groups: { blog, comments, total, pendingCount, latestAt }, sorted newest).
-   NOTE: the controller still has its own copy of this grouping; this is an
-   additive read fn so a Server Component can produce the grouped shape without
-   the API hop. (Follow-up: point the controller at this fn to dedupe.) */
+/* Grouped admin listing — returns groups: { blog, comments, total, pendingCount,
+   latestAt }, sorted newest. Used by the admin route and by a Server Component
+   that seeds the grouped shape without the API hop. */
 export const getGroupedComments = async (params = {}) => {
   const where     = buildCommentWhere(params);
   const sortOrder = params.sort === "oldest" ? "asc" : "desc";
@@ -89,6 +87,17 @@ export const countAndFindComments = (where, sortOrder, skip, take) =>
       take,
     }),
   ]);
+
+/* Flat admin listing — returns the exact { comments, total, page, totalPages }
+   the admin flat listing needs. */
+export const getFlatComments = async ({ page = 1, limit = 20, status, blogId, q, date, sort } = {}) => {
+  const where     = buildCommentWhere({ status, blogId, q, date });
+  const sortOrder = sort === "oldest" ? "asc" : "desc";
+  const take      = parseInt(limit);
+  const skip      = (parseInt(page) - 1) * take;
+  const [total, comments] = await countAndFindComments(where, sortOrder, skip, take);
+  return { comments, total, page: parseInt(page), totalPages: Math.ceil(total / take) };
+};
 
 export const groupCommentStats = () =>
   Promise.all([

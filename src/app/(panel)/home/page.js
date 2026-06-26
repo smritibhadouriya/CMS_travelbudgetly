@@ -1,4 +1,4 @@
-import HomePage from '@/screens/PagesContent/HomePage.jsx';
+import HomePage from './HomePage.jsx';
 import { getHome } from '@/lib/services/home.service';
 
 // Singleton config — render per request, never statically prerender / cache.

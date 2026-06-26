@@ -1,4 +1,4 @@
-import SeoAdmin from '@/screens/PagesContent/SeoAdmin.jsx';
+import SeoAdmin from './SeoAdmin.jsx';
 import { getAllSeoEntries } from '@/lib/services/seo.service';
 
 // Aggregated SEO grid — render per request, never statically prerender / cache.

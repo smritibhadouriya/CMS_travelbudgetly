@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Login from '@/components/Login';
+import Login from './Login';
 
 // Client-only gate so the Login component (browser APIs) never runs during SSR.
 export default function LoginPage() {

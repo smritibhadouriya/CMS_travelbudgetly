@@ -1,4 +1,4 @@
-import AuthorsPage from '@/screens/Author/AuthorsPage.jsx';
+import AuthorsPage from './AuthorsPage.jsx';
 import { findAuthors } from '@/lib/services/author.service';
 
 // Live admin list — render per request, never statically prerender / cache.

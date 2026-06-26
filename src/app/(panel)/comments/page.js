@@ -1,4 +1,4 @@
-import CommentsPage from '@/screens/Comment/CommentPage.jsx';
+import CommentsPage from './CommentPage.jsx';
 import { getGroupedComments } from '@/lib/services/comment.service';
 
 // Live admin list — render per request, never statically prerender / cache.

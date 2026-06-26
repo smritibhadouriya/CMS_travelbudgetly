@@ -1,4 +1,4 @@
-import SettingsAdmin from '@/screens/PagesContent/SettingsAdmin.jsx';
+import SettingsAdmin from './SettingsAdmin.jsx';
 import { getSettings } from '@/lib/services/settings.service';
 
 // Singleton config — render per request, never statically prerender / cache.

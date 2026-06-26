@@ -1,4 +1,4 @@
-// Serves uploaded images at /api/upload/<file> (replaces Express static mount).
+// Serves uploaded images at /api/upload/<file>.
 import fs from 'fs';
 import path from 'path';
 import { uploadDir } from '@/lib/upload';

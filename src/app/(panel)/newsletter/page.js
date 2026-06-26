@@ -1,5 +1,5 @@
-import NewsletterSubscribersPage from '@/screens/PagesContent/NewsletterSubscribersPage.jsx';
-import { countSubscribers, findSubscribers } from '@/lib/services/newsletter.service';
+import NewsletterSubscribersPage from './NewsletterSubscribersPage.jsx';
+import { getSubscribersPage, getSubscriberStats } from '@/lib/services/newsletter.service';
 
 // Live admin list — render per request, never statically prerender / cache.
 export const dynamic = 'force-dynamic';
@@ -11,25 +11,14 @@ export default async function Page({ searchParams }) {
   const page   = Math.max(1, Number(sp?.page) || 1);
   const status = sp?.status === 'active' || sp?.status === 'inactive' ? sp.status : '';
 
-  // Mirrors the controller's getAllSubscribers `where` (service translates
-  // isActive → unsubscribedAt) and getStats counts — fetched directly here.
-  const where = {};
-  if (status === 'active')   where.isActive = true;
-  if (status === 'inactive') where.isActive = false;
-
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-  const [total, subscribers, statTotal, statActive, statInactive, statNew] = await Promise.all([
-    countSubscribers(where),
-    findSubscribers({ where, skip: (page - 1) * LIMIT, take: LIMIT }),
-    countSubscribers(),
-    countSubscribers({ isActive: true }),
-    countSubscribers({ isActive: false }),
-    countSubscribers({ subscribedAt: { gte: sevenDaysAgo } }),
+  // Same data the /api/newsletter list + stats endpoints produce — now via
+  // the shared service functions (single source of truth).
+  const [sub, initialStats] = await Promise.all([
+    getSubscribersPage({ page, limit: LIMIT, status }),
+    getSubscriberStats(),
   ]);
 
-  const initialSubscribers = { subscribers, total, totalPages: Math.ceil(total / LIMIT) };
-  const initialStats = { total: statTotal, active: statActive, inactive: statInactive, newThisWeek: statNew };
+  const initialSubscribers = { subscribers: sub.subscribers, total: sub.total, totalPages: sub.totalPages };
 
   return (
     <NewsletterSubscribersPage

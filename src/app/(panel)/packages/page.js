@@ -1,4 +1,4 @@
-import PackageTableView from '@/screens/PagesContent/PackageTableView.jsx';
+import PackageTableView from './PackageTableView.jsx';
 import { listPackages } from '@/lib/services/package.service';
 
 // Live admin list — render per request, never statically prerender / cache.

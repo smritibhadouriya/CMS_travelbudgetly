@@ -1,4 +1,4 @@
-import RedirectsAdmin from '@/screens/PagesContent/RedirectsAdmin.jsx';
+import RedirectsAdmin from './RedirectsAdmin.jsx';
 import { findAllRedirects } from '@/lib/services/redirect.service';
 
 // Live admin list — render per request, never statically prerender / cache.

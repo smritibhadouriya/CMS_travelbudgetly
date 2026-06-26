@@ -1,5 +1,5 @@
 
-import AddBlogPage from '@/screens/Blog/AddBlogPage.jsx';
+import AddBlogPage from '@/app/(panel)/blog/_shared/AddBlogPage.jsx';
 import config from '@/lib/panel-config';
 
 export default function Page() {

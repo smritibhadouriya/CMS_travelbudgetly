@@ -1,7 +1,4 @@
-/* admin/styles/cms.css  — Global CMS design system
-   Import this once in your admin main.jsx / App.jsx:
-   import "./styles/cms.css";
-*/
+/* cms.css — Global CMS design system. Imported via globals.css. */
 
 /* ─────────────────────────────────────
    FONT
