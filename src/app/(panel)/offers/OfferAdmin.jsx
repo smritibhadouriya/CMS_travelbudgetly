@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { toast } from "react-toastify";
 import { SectionCard, Divider, Input, Textarea, Toggle } from "@/components/ui/UI.jsx";
-import ImagePicker from "@/components/ui/ImagePicker.jsx";
+import { ImagePicker } from "@/components/ui/FormComponents";
 import { getOffers, createOffer, updateOffer, deleteOffer } from "@/client-api/api.js";
 
 /* ─── image helpers (copied exactly) ─── */
@@ -134,7 +134,7 @@ export default function OfferAdmin({ initialOffers = [] }) {
             <Textarea label="Subtext" limit={40} rows={3} value={subtext} onChange={e=>setSubtext(e.target.value)} placeholder="A short supporting line for the offer…" />
             <Input label="Slug" value={slug} onChange={e=>setSlug(e.target.value)} placeholder="summer-sale" hint="Optional — auto from heading if left blank" />
             <Divider label="Banner Image" />
-            <ImagePicker value={banner} onChange={setBanner} fieldName="banner" />
+            <ImagePicker value={banner} onChange={setBanner} fieldName="banner"  uploadEndpoint="api/upload/image"/>
             <Divider />
             <Toggle label="Published" description="Visible on the public site" checked={isPublished} onChange={setIsPublished} />
             <div style={{display:"flex",gap:10,marginTop:16}}>

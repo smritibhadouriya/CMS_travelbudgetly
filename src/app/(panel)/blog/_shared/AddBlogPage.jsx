@@ -492,6 +492,7 @@ export default function AddBlogPage() {
               set("image", v);
             }}
             fieldName="imageFile"
+            uploadEndpoint="api/upload/image"
           />
           <p className="text-xs text-gray-400 mt-1">
             Featured + banner image. Max: <strong>{LIMITS.IMAGE_MB} MB</strong>.

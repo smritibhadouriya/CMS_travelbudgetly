@@ -2,11 +2,11 @@
 import { useState, useRef, useCallback } from "react";
 import { toast } from "react-toastify";
 import { SectionCard, Divider, Input, Textarea, Toggle, VisBadge } from "@/components/ui/UI.jsx";
-import ImagePicker from "@/components/ui/ImagePicker.jsx";
+import { ImagePicker } from "@/components/ui/FormComponents";
 import { SeoSection } from "@/components/ui/Sections.jsx";
 import { getHomePage, saveHomePage } from "@/client-api/api.js";
 
-/* ─── image helpers (same as About.jsx) ─── */
+/* ─── image helpers ─── */
 const mapImg   = (raw) => ({ url:(raw?.src||raw?.url||""), file:null, _preview:null, alt:raw?.alt||"", title:raw?.title||"" });
 const cleanImg = (i)   => ({ src:(i?.file instanceof File)?"":(i?.url||""), alt:i?.alt||"", title:i?.title||"" });
 const appendImg = (fd, key, img) => { if (img?.file instanceof File) fd.append(key, img.file); };
@@ -14,12 +14,24 @@ const appendImg = (fd, key, img) => { if (img?.file instanceof File) fd.append(k
 /* ─── blank factories ─── */
 const blankSeo = () => ({ metaTitle:"", metaDescription:"", metaKeywords:[], canonicalUrl:"", index:true, follow:true, image:mapImg() });
 
+/* ─── Tab definitions ─── */
+const TABS = [
+  { id: "hero",         label: "Hero",         icon: "🦸" },
+  { id: "destinations", label: "Destinations", icon: "🌍" },
+  { id: "offers",       label: "Offers",       icon: "🏷️" },
+  { id: "cities",       label: "Cities",       icon: "🏙️" },
+  { id: "spiritual",    label: "Spiritual",    icon: "🛕" },
+  { id: "whychooseus",  label: "Why Us",       icon: "⭐" },
+  { id: "packages",     label: "Packages",     icon: "🎒" },
+  { id: "seasonal",     label: "Seasonal",     icon: "🍂" },
+  { id: "blogs",        label: "Blogs",        icon: "📝" },
+  { id: "newsletter",   label: "Newsletter",   icon: "📧" },
+  { id: "seo",          label: "SEO",          icon: "🔍" },
+];
+
 export default function HomePageAdmin({ initialData = {} }) {
-  // Initial page data comes from the Server Component (service → Prisma), not
-  // axios. Seeds mirror `load`'s mapping exactly. `load` is retained for the
-  // post-save refresh + the retry button.
   const d = initialData || {};
-  const [tab, setTab] = useState("content");
+  const [tab, setTab] = useState("hero");
 
   /* Hero */
   const [heroEnabled,  setHeroEnabled]  = useState(d.heroEnabled !== false);
@@ -114,53 +126,42 @@ export default function HomePageAdmin({ initialData = {} }) {
       setHeroTablet(mapImg({ url: d.heroImageTablet }));
       setHeroDesktop(mapImg({ url: d.heroImageDesktop }));
       setHeroLaptop(mapImg({ url: d.heroImageLaptop }));
-
       setDestinationsEnabled(d.destinationsEnabled !== false);
       setDestinationsWatermark(d.destinationsWatermark || "");
       setDestinationsHeading(d.destinationsHeading || "");
       setDestinationsSubtext(d.destinationsSubtext || "");
-
       setSpecialOffersEnabled(d.specialOffersEnabled !== false);
       setSpecialOffersHeading(d.specialOffersHeading || "");
-
       setPopularCitiesEnabled(d.popularCitiesEnabled !== false);
       setPopularCitiesHeading(d.popularCitiesHeading || "");
       setPopularCitiesExploreLinkText(d.popularCitiesExploreLinkText || "");
-
       setSpritualpackage(d.spritualpackage !== false);
       setSpritualpackageHeading(d.spritualpackageHeading || "");
-
       setWhyChooseUsEnabled(d.whyChooseUsEnabled !== false);
       setWhyChooseUsWatermark(d.whyChooseUsWatermark || "");
       setWhyChooseUsHeading(d.whyChooseUsHeading || "");
       setTrustFeatures((Array.isArray(d.trustFeatures) ? d.trustFeatures : []).map(f => ({ icon:f?.icon||"", title:f?.title||"", desc:f?.desc||"" })));
-
       let center = [];
       try { center = JSON.parse(d.whyChooseUsCenterImages || "[]"); } catch { center = []; }
       setCenterImgs((Array.isArray(center) ? center : []).map(u => mapImg({ url: typeof u === "string" ? u : (u?.url || u?.src || "") })));
-
       setPackagesEnabled(d.packagesEnabled !== false);
       setPackagesWatermark(d.packagesWatermark || "");
       setPackagesHeading(d.packagesHeading || "");
       setPackagesSubtext(d.packagesSubtext || "");
       setPackagesExploreLinkText(d.packagesExploreLinkText || "");
-
       setSeasonalEnabled(d.seasonalEnabled !== false);
       setSeasonalWatermark(d.seasonalWatermark || "");
       setSeasonalHeading(d.seasonalHeading || "");
       setSeasonalSubtext(d.seasonalSubtext || "");
       setSeasons((Array.isArray(d.seasons) ? d.seasons : []).map(s => ({ id:s?.id||"", label:s?.label||"", image:s?.image||"" })));
-
       setBlogsEnabled(d.blogsEnabled !== false);
       setBlogsWatermark(d.blogsWatermark || "");
       setBlogsHeading(d.blogsHeading || "");
       setBlogsSubheading(d.blogsSubheading || "");
       setBlogsExploreLinkText(d.blogsExploreLinkText || "");
-
       setNewsletterEnabled(d.newsletterEnabled !== false);
       setNewsletterHeading(d.newsletterHeading || "");
       setNewsletterSubtext(d.newsletterSubtext || "");
-
       setSeo({
         metaTitle: d.seo?.metaTitle || "",
         metaDescription: d.seo?.metaDescription || "",
@@ -178,9 +179,6 @@ export default function HomePageAdmin({ initialData = {} }) {
     return () => { cancelled = true; };
   }, []);
 
-  // Initial data arrives via the `initialData` prop (server-fetched) — no
-  // on-mount GET. `load` below still runs after save and on the retry button.
-
   const handleSave = async () => {
     if (inFlight.current || saving) return;
     inFlight.current = true; setSaving(true);
@@ -191,50 +189,18 @@ export default function HomePageAdmin({ initialData = {} }) {
         heroImageTablet:  (heroTablet.file instanceof File)  ? "" : (heroTablet.url  || ""),
         heroImageDesktop: (heroDesktop.file instanceof File) ? "" : (heroDesktop.url || ""),
         heroImageLaptop:  (heroLaptop.file instanceof File)  ? "" : (heroLaptop.url  || ""),
-
-        destinationsEnabled,
-        destinationsWatermark,
-        destinationsHeading,
-        destinationsSubtext,
-
-        specialOffersEnabled,
-        specialOffersHeading,
-
-        popularCitiesEnabled,
-        popularCitiesHeading,
-        popularCitiesExploreLinkText,
-
-        spritualpackage,
-        spritualpackageHeading,
-
-        whyChooseUsEnabled,
-        whyChooseUsWatermark,
-        whyChooseUsHeading,
+        destinationsEnabled, destinationsWatermark, destinationsHeading, destinationsSubtext,
+        specialOffersEnabled, specialOffersHeading,
+        popularCitiesEnabled, popularCitiesHeading, popularCitiesExploreLinkText,
+        spritualpackage, spritualpackageHeading,
+        whyChooseUsEnabled, whyChooseUsWatermark, whyChooseUsHeading,
         trustFeatures: trustFeatures.map(f => ({ icon:f.icon, title:f.title, desc:f.desc })),
         whyChooseUsCenterImages: centerImgs.map(i => i.file instanceof File ? "" : (i.url || "")).filter(Boolean),
-
-        packagesEnabled,
-        packagesWatermark,
-        packagesHeading,
-        packagesSubtext,
-        packagesExploreLinkText,
-
-        seasonalEnabled,
-        seasonalWatermark,
-        seasonalHeading,
-        seasonalSubtext,
+        packagesEnabled, packagesWatermark, packagesHeading, packagesSubtext, packagesExploreLinkText,
+        seasonalEnabled, seasonalWatermark, seasonalHeading, seasonalSubtext,
         seasons: seasons.map(s => ({ id:s.id, label:s.label, image:s.image })),
-
-        blogsEnabled,
-        blogsWatermark,
-        blogsHeading,
-        blogsSubheading,
-        blogsExploreLinkText,
-
-        newsletterEnabled,
-        newsletterHeading,
-        newsletterSubtext,
-
+        blogsEnabled, blogsWatermark, blogsHeading, blogsSubheading, blogsExploreLinkText,
+        newsletterEnabled, newsletterHeading, newsletterSubtext,
         seo: { ...seo, image: cleanImg(seo.image) },
       };
 
@@ -254,84 +220,153 @@ export default function HomePageAdmin({ initialData = {} }) {
     } finally { setSaving(false); inFlight.current = false; }
   };
 
-  if (loading) return <div className="cms-root"><div className="cms-loading"><div className="cms-spinner"/><p style={{color:"var(--cms-muted)",fontSize:13}}>Loading Home page…</p></div></div>;
-  if (loadErr)  return <div className="cms-root"><div className="cms-error-state"><span style={{fontSize:36}}>⚠️</span><p style={{color:"#ef4444",fontWeight:600,fontSize:14}}>{loadErr}</p><button onClick={load} style={{padding:"8px 20px",background:"var(--cms-accent)",color:"#fff",borderRadius:10,border:"none",fontWeight:700,cursor:"pointer"}}>Retry</button></div></div>;
+  /* visibility map for tab indicator dots */
+  const visMap = {
+    hero: heroEnabled,
+    destinations: destinationsEnabled,
+    offers: specialOffersEnabled,
+    cities: popularCitiesEnabled,
+    spiritual: spritualpackage,
+    whychooseus: whyChooseUsEnabled,
+    packages: packagesEnabled,
+    seasonal: seasonalEnabled,
+    blogs: blogsEnabled,
+    newsletter: newsletterEnabled,
+  };
+
+  if (loading) return (
+    <div className="cms-root">
+      <div className="cms-loading">
+        <div className="cms-spinner"/>
+        <p style={{color:"var(--cms-muted)",fontSize:13}}>Loading Home page…</p>
+      </div>
+    </div>
+  );
+  if (loadErr) return (
+    <div className="cms-root">
+      <div className="cms-error-state">
+        <span style={{fontSize:36}}>⚠️</span>
+        <p style={{color:"#ef4444",fontWeight:600,fontSize:14}}>{loadErr}</p>
+        <button onClick={load} style={{padding:"8px 20px",background:"var(--cms-accent)",color:"#fff",borderRadius:10,border:"none",fontWeight:700,cursor:"pointer"}}>Retry</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="cms-root">
-      {saving && <div className="cms-overlay"><div className="cms-overlay-box"><div className="cms-spinner"/><p style={{fontWeight:700,fontSize:16}}>Saving…</p></div></div>}
-
-      <div className="cms-page-header">
-        <div><p className="cms-page-title">Home Page</p><p className="cms-page-sub">Hero · Destinations · Offers · Cities · Packages · Seasonal · Blogs · Newsletter · SEO</p></div>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div className="cms-tabs">
-            {[["content","✏️ Content"],["seo","🔍 SEO"]].map(([id,label]) => (
-              <button key={id} type="button" onClick={()=>setTab(id)} className={`cms-tab ${tab===id?"active":""}`}>{label}</button>
-            ))}
+      {saving && (
+        <div className="cms-overlay">
+          <div className="cms-overlay-box">
+            <div className="cms-spinner"/>
+            <p style={{fontWeight:700,fontSize:16}}>Saving…</p>
           </div>
-          <button type="button" onClick={handleSave} disabled={saving} className="cms-save-btn">
-            {saving ? <><div className="cms-spinner" style={{width:14,height:14,borderWidth:2}}/> Saving…</> : <><svg style={{width:14,height:14}} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4zM12 17v-6m-3 3h6"/></svg> Save Page</>}
-          </button>
         </div>
+      )}
+
+      {/* ── Page Header ── */}
+      <div className="cms-page-header">
+        <div>
+          <p className="cms-page-title">Home Page</p>
+          <p className="cms-page-sub">Manage all homepage sections</p>
+        </div>
+        <button type="button" onClick={handleSave} disabled={saving} className="cms-save-btn">
+          {saving
+            ? <><div className="cms-spinner" style={{width:14,height:14,borderWidth:2}}/> Saving…</>
+            : <><svg style={{width:14,height:14}} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4zM12 17v-6m-3 3h6"/></svg> Save Page</>
+          }
+        </button>
       </div>
 
-      <div className="cms-content">
-        {tab === "seo" && <SeoSection data={seo} onChange={setSeo} siteUrl="https://www.TravelBudgetly.com" />}
+      {/* ── Sidebar + Content layout ── */}
+      <div className="cms-layout">
 
-        {tab === "content" && (
-          <>
-            <div className="cms-info-banner">
-              <svg style={{width:16,height:16,flexShrink:0}} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <span>Use each section's <strong>toggle</strong> to show/hide it on the live site.</span>
-            </div>
+        {/* Sidebar nav */}
+        <nav className="cms-sidenav">
+          {TABS.map(({ id, label, icon }) => {
+            const isActive = tab === id;
+            const isVisible = visMap[id]; // undefined for SEO tab → no dot
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                className={`cms-sidenav-item ${isActive ? "active" : ""}`}
+              >
+                <span className="cms-sidenav-icon">{icon}</span>
+                <span className="cms-sidenav-label">{label}</span>
+                {isVisible !== undefined && (
+                  <span
+                    className="cms-sidenav-dot"
+                    style={{ background: isVisible ? "#22c55e" : "#d1d5db" }}
+                    title={isVisible ? "Visible" : "Hidden"}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </nav>
 
-            {/* HERO */}
+        {/* Main panel */}
+        <div className="cms-panel">
+
+          {/* HERO */}
+          {tab === "hero" && (
             <SectionCard icon="🦸" title="Hero Section" isVisible={heroEnabled} onVisToggle={setHeroEnabled}>
-              <Toggle label="Show section" checked={heroEnabled} onChange={setHeroEnabled} />
+              <Toggle label="Show section on live site" checked={heroEnabled} onChange={setHeroEnabled} />
               <Divider label="Responsive Hero Images" />
-              <ImagePicker label="Mobile Image"  value={heroMobile}  onChange={setHeroMobile}  fieldName="heroImageMobile" />
-              <ImagePicker label="Tablet Image"  value={heroTablet}  onChange={setHeroTablet}  fieldName="heroImageTablet" />
-              <ImagePicker label="Laptop Image"  value={heroLaptop}  onChange={setHeroLaptop}  fieldName="heroImageLaptop" />
-              <ImagePicker label="Desktop Image" value={heroDesktop} onChange={setHeroDesktop} fieldName="heroImageDesktop" />
+              <ImagePicker label="Mobile Image"  value={heroMobile}  onChange={setHeroMobile}  fieldName="heroImageMobile"  uploadEndpoint="api/upload/image" />
+              <ImagePicker label="Tablet Image"  value={heroTablet}  onChange={setHeroTablet}  fieldName="heroImageTablet"  uploadEndpoint="api/upload/image" />
+              <ImagePicker label="Laptop Image"  value={heroLaptop}  onChange={setHeroLaptop}  fieldName="heroImageLaptop"  uploadEndpoint="api/upload/image" />
+              <ImagePicker label="Desktop Image" value={heroDesktop} onChange={setHeroDesktop} fieldName="heroImageDesktop" uploadEndpoint="api/upload/image" />
             </SectionCard>
+          )}
 
-            {/* FEATURED DESTINATIONS */}
-            <SectionCard icon="🌍" title="Featured Destinations" defaultOpen={false} isVisible={destinationsEnabled} onVisToggle={setDestinationsEnabled}>
-              <Toggle label="Show section" checked={destinationsEnabled} onChange={setDestinationsEnabled} />
+          {/* DESTINATIONS */}
+          {tab === "destinations" && (
+            <SectionCard icon="🌍" title="Featured Destinations" isVisible={destinationsEnabled} onVisToggle={setDestinationsEnabled}>
+              <Toggle label="Show section on live site" checked={destinationsEnabled} onChange={setDestinationsEnabled} />
               <Divider />
               <Input label="Watermark" value={destinationsWatermark} onChange={e=>setDestinationsWatermark(e.target.value)} placeholder="EXPLORE" />
-              <Input label="Heading" value={destinationsHeading} onChange={e=>setDestinationsHeading(e.target.value)} placeholder="Featured Destinations" />
+              <Input label="Heading"   value={destinationsHeading}   onChange={e=>setDestinationsHeading(e.target.value)}   placeholder="Featured Destinations" />
               <Textarea label="Subtext" rows={2} value={destinationsSubtext} onChange={e=>setDestinationsSubtext(e.target.value)} />
             </SectionCard>
+          )}
 
-            {/* SPECIAL OFFERS */}
-            <SectionCard icon="🏷️" title="Special Offers" defaultOpen={false} isVisible={specialOffersEnabled} onVisToggle={setSpecialOffersEnabled}>
-              <Toggle label="Show section" checked={specialOffersEnabled} onChange={setSpecialOffersEnabled} />
+          {/* SPECIAL OFFERS */}
+          {tab === "offers" && (
+            <SectionCard icon="🏷️" title="Special Offers" isVisible={specialOffersEnabled} onVisToggle={setSpecialOffersEnabled}>
+              <Toggle label="Show section on live site" checked={specialOffersEnabled} onChange={setSpecialOffersEnabled} />
               <Divider />
               <Input label="Heading" value={specialOffersHeading} onChange={e=>setSpecialOffersHeading(e.target.value)} placeholder="Special Offers" />
             </SectionCard>
+          )}
 
-            {/* POPULAR CITIES */}
-            <SectionCard icon="🏙️" title="Popular Cities" defaultOpen={false} isVisible={popularCitiesEnabled} onVisToggle={setPopularCitiesEnabled}>
-              <Toggle label="Show section" checked={popularCitiesEnabled} onChange={setPopularCitiesEnabled} />
+          {/* POPULAR CITIES */}
+          {tab === "cities" && (
+            <SectionCard icon="🏙️" title="Popular Cities" isVisible={popularCitiesEnabled} onVisToggle={setPopularCitiesEnabled}>
+              <Toggle label="Show section on live site" checked={popularCitiesEnabled} onChange={setPopularCitiesEnabled} />
               <Divider />
-              <Input label="Heading" value={popularCitiesHeading} onChange={e=>setPopularCitiesHeading(e.target.value)} placeholder="Popular Cities" />
+              <Input label="Heading"           value={popularCitiesHeading}         onChange={e=>setPopularCitiesHeading(e.target.value)}         placeholder="Popular Cities" />
               <Input label="Explore Link Text" value={popularCitiesExploreLinkText} onChange={e=>setPopularCitiesExploreLinkText(e.target.value)} placeholder="Explore all cities" />
             </SectionCard>
+          )}
 
-            {/* SPIRITUAL PACKAGES */}
-            <SectionCard icon="🛕" title="Spiritual Packages" defaultOpen={false} isVisible={spritualpackage} onVisToggle={setSpritualpackage}>
-              <Toggle label="Show section" checked={spritualpackage} onChange={setSpritualpackage} />
+          {/* SPIRITUAL */}
+          {tab === "spiritual" && (
+            <SectionCard icon="🛕" title="Spiritual Packages" isVisible={spritualpackage} onVisToggle={setSpritualpackage}>
+              <Toggle label="Show section on live site" checked={spritualpackage} onChange={setSpritualpackage} />
               <Divider />
               <Input label="Heading" value={spritualpackageHeading} onChange={e=>setSpritualpackageHeading(e.target.value)} placeholder="Spiritual Packages" />
             </SectionCard>
+          )}
 
-            {/* WHY CHOOSE US */}
-            <SectionCard icon="⭐" title="Why Choose Us" defaultOpen={false} isVisible={whyChooseUsEnabled} onVisToggle={setWhyChooseUsEnabled}>
-              <Toggle label="Show section" checked={whyChooseUsEnabled} onChange={setWhyChooseUsEnabled} />
+          {/* WHY CHOOSE US */}
+          {tab === "whychooseus" && (
+            <SectionCard icon="⭐" title="Why Choose Us" isVisible={whyChooseUsEnabled} onVisToggle={setWhyChooseUsEnabled}>
+              <Toggle label="Show section on live site" checked={whyChooseUsEnabled} onChange={setWhyChooseUsEnabled} />
               <Divider />
               <Input label="Watermark" value={whyChooseUsWatermark} onChange={e=>setWhyChooseUsWatermark(e.target.value)} placeholder="WHY US" />
-              <Input label="Heading" value={whyChooseUsHeading} onChange={e=>setWhyChooseUsHeading(e.target.value)} placeholder="Why Choose Us" />
+              <Input label="Heading"   value={whyChooseUsHeading}   onChange={e=>setWhyChooseUsHeading(e.target.value)}   placeholder="Why Choose Us" />
 
               <Divider label={`Trust Features (${trustFeatures.length})`} />
               {trustFeatures.map((f,i) => (
@@ -341,7 +376,7 @@ export default function HomePageAdmin({ initialData = {} }) {
                     <button type="button" className="cms-remove-btn" onClick={()=>setTrustFeatures(arr=>arr.filter((_,j)=>j!==i))}>✕</button>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <Input label="Icon" value={f.icon} onChange={e=>{const a=[...trustFeatures];a[i]={...a[i],icon:e.target.value};setTrustFeatures(a);}} placeholder="FaShieldAlt" />
+                    <Input label="Icon"  value={f.icon}  onChange={e=>{const a=[...trustFeatures];a[i]={...a[i],icon:e.target.value};setTrustFeatures(a);}} placeholder="FaShieldAlt" />
                     <Input label="Title" value={f.title} onChange={e=>{const a=[...trustFeatures];a[i]={...a[i],title:e.target.value};setTrustFeatures(a);}} />
                   </div>
                   <Textarea label="Description" rows={2} value={f.desc} onChange={e=>{const a=[...trustFeatures];a[i]={...a[i],desc:e.target.value};setTrustFeatures(a);}} />
@@ -361,23 +396,27 @@ export default function HomePageAdmin({ initialData = {} }) {
               ))}
               <button type="button" className="cms-add-btn" onClick={()=>setCenterImgs(a=>[...a,mapImg()])}>+ Add Center Image ({centerImgs.length})</button>
             </SectionCard>
+          )}
 
-            {/* POPULAR PACKAGES */}
-            <SectionCard icon="🎒" title="Popular Packages" defaultOpen={false} isVisible={packagesEnabled} onVisToggle={setPackagesEnabled}>
-              <Toggle label="Show section" checked={packagesEnabled} onChange={setPackagesEnabled} />
+          {/* PACKAGES */}
+          {tab === "packages" && (
+            <SectionCard icon="🎒" title="Popular Packages" isVisible={packagesEnabled} onVisToggle={setPackagesEnabled}>
+              <Toggle label="Show section on live site" checked={packagesEnabled} onChange={setPackagesEnabled} />
               <Divider />
-              <Input label="Watermark" value={packagesWatermark} onChange={e=>setPackagesWatermark(e.target.value)} placeholder="PACKAGES" />
-              <Input label="Heading" value={packagesHeading} onChange={e=>setPackagesHeading(e.target.value)} placeholder="Popular Packages" />
-              <Textarea label="Subtext" rows={2} value={packagesSubtext} onChange={e=>setPackagesSubtext(e.target.value)} />
+              <Input label="Watermark"         value={packagesWatermark}       onChange={e=>setPackagesWatermark(e.target.value)}       placeholder="PACKAGES" />
+              <Input label="Heading"           value={packagesHeading}         onChange={e=>setPackagesHeading(e.target.value)}         placeholder="Popular Packages" />
+              <Textarea label="Subtext" rows={2} value={packagesSubtext}       onChange={e=>setPackagesSubtext(e.target.value)} />
               <Input label="Explore Link Text" value={packagesExploreLinkText} onChange={e=>setPackagesExploreLinkText(e.target.value)} placeholder="View all packages" />
             </SectionCard>
+          )}
 
-            {/* SEASONAL TRAVEL */}
-            <SectionCard icon="🍂" title="Seasonal Travel" defaultOpen={false} isVisible={seasonalEnabled} onVisToggle={setSeasonalEnabled}>
-              <Toggle label="Show section" checked={seasonalEnabled} onChange={setSeasonalEnabled} />
+          {/* SEASONAL */}
+          {tab === "seasonal" && (
+            <SectionCard icon="🍂" title="Seasonal Travel" isVisible={seasonalEnabled} onVisToggle={setSeasonalEnabled}>
+              <Toggle label="Show section on live site" checked={seasonalEnabled} onChange={setSeasonalEnabled} />
               <Divider />
               <Input label="Watermark" value={seasonalWatermark} onChange={e=>setSeasonalWatermark(e.target.value)} placeholder="SEASONS" />
-              <Input label="Heading" value={seasonalHeading} onChange={e=>setSeasonalHeading(e.target.value)} placeholder="Seasonal Travel" />
+              <Input label="Heading"   value={seasonalHeading}   onChange={e=>setSeasonalHeading(e.target.value)}   placeholder="Seasonal Travel" />
               <Textarea label="Subtext" rows={2} value={seasonalSubtext} onChange={e=>setSeasonalSubtext(e.target.value)} />
 
               <Divider label={`Seasons (${seasons.length})`} />
@@ -388,7 +427,7 @@ export default function HomePageAdmin({ initialData = {} }) {
                     <button type="button" className="cms-remove-btn" onClick={()=>setSeasons(arr=>arr.filter((_,j)=>j!==i))}>✕</button>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <Input label="ID" value={s.id} onChange={e=>{const a=[...seasons];a[i]={...a[i],id:e.target.value};setSeasons(a);}} placeholder="summer" />
+                    <Input label="ID"    value={s.id}    onChange={e=>{const a=[...seasons];a[i]={...a[i],id:e.target.value};setSeasons(a);}}    placeholder="summer" />
                     <Input label="Label" value={s.label} onChange={e=>{const a=[...seasons];a[i]={...a[i],label:e.target.value};setSeasons(a);}} placeholder="Summer" />
                   </div>
                   <Input label="Image URL" type="url" value={s.image} onChange={e=>{const a=[...seasons];a[i]={...a[i],image:e.target.value};setSeasons(a);}} placeholder="https://example.com/image.jpg" />
@@ -396,27 +435,135 @@ export default function HomePageAdmin({ initialData = {} }) {
               ))}
               <button type="button" className="cms-add-btn" onClick={()=>setSeasons(a=>[...a,{ id:"", label:"", image:"" }])}>+ Add Season ({seasons.length})</button>
             </SectionCard>
+          )}
 
-            {/* LATEST BLOGS */}
-            <SectionCard icon="📝" title="Latest Blogs" defaultOpen={false} isVisible={blogsEnabled} onVisToggle={setBlogsEnabled}>
-              <Toggle label="Show section" checked={blogsEnabled} onChange={setBlogsEnabled} />
+          {/* BLOGS */}
+          {tab === "blogs" && (
+            <SectionCard icon="📝" title="Latest Blogs" isVisible={blogsEnabled} onVisToggle={setBlogsEnabled}>
+              <Toggle label="Show section on live site" checked={blogsEnabled} onChange={setBlogsEnabled} />
               <Divider />
-              <Input label="Watermark" value={blogsWatermark} onChange={e=>setBlogsWatermark(e.target.value)} placeholder="BLOG" />
-              <Input label="Heading" value={blogsHeading} onChange={e=>setBlogsHeading(e.target.value)} placeholder="Latest Blogs" />
-              <Input label="Subheading" value={blogsSubheading} onChange={e=>setBlogsSubheading(e.target.value)} />
+              <Input label="Watermark"         value={blogsWatermark}       onChange={e=>setBlogsWatermark(e.target.value)}       placeholder="BLOG" />
+              <Input label="Heading"           value={blogsHeading}         onChange={e=>setBlogsHeading(e.target.value)}         placeholder="Latest Blogs" />
+              <Input label="Subheading"        value={blogsSubheading}      onChange={e=>setBlogsSubheading(e.target.value)} />
               <Input label="Explore Link Text" value={blogsExploreLinkText} onChange={e=>setBlogsExploreLinkText(e.target.value)} placeholder="Read all articles" />
             </SectionCard>
+          )}
 
-            {/* NEWSLETTER */}
-            <SectionCard icon="📧" title="Newsletter" defaultOpen={false} isVisible={newsletterEnabled} onVisToggle={setNewsletterEnabled}>
-              <Toggle label="Show section" checked={newsletterEnabled} onChange={setNewsletterEnabled} />
+          {/* NEWSLETTER */}
+          {tab === "newsletter" && (
+            <SectionCard icon="📧" title="Newsletter" isVisible={newsletterEnabled} onVisToggle={setNewsletterEnabled}>
+              <Toggle label="Show section on live site" checked={newsletterEnabled} onChange={setNewsletterEnabled} />
               <Divider />
-              <Input label="Heading" value={newsletterHeading} onChange={e=>setNewsletterHeading(e.target.value)} placeholder="Subscribe to our Newsletter" />
+              <Input label="Heading"    value={newsletterHeading} onChange={e=>setNewsletterHeading(e.target.value)} placeholder="Subscribe to our Newsletter" />
               <Textarea label="Subtext" rows={2} value={newsletterSubtext} onChange={e=>setNewsletterSubtext(e.target.value)} />
             </SectionCard>
-          </>
-        )}
+          )}
+
+          {/* SEO */}
+          {tab === "seo" && (
+            <SeoSection data={seo} onChange={setSeo} siteUrl="https://www.TravelBudgetly.com" />
+          )}
+
+        </div>
       </div>
+
+      {/* ── Injected layout styles ── */}
+   <style>{`
+        .cms-layout {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+          min-height: calc(100vh - 72px);
+        }
+
+        /* ── Horizontal tab bar ── */
+        .cms-sidenav {
+          width: 100%;
+          min-width: unset;
+          background: var(--cms-sidebar, #f8f9fb);
+          border-right: none;
+          border-bottom: 1px solid var(--cms-border, #e5e7eb);
+          padding: 8px 12px;
+          display: flex;
+          flex-direction: row;
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          gap: 4px;
+          position: sticky;
+          top: 0;
+          height: auto;
+          z-index: 10;
+        }
+
+        .cms-sidenav::-webkit-scrollbar {
+          height: 4px;
+        }
+        .cms-sidenav::-webkit-scrollbar-thumb {
+          background: var(--cms-border, #e5e7eb);
+          border-radius: 4px;
+        }
+
+        .cms-sidenav-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          width: auto;
+          padding: 8px 14px;
+          border: none;
+          border-radius: 8px;
+          background: transparent;
+          color: var(--cms-text, #374151);
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          white-space: nowrap;
+          flex-shrink: 0;
+          transition: background 0.15s, color 0.15s;
+        }
+
+        .cms-sidenav-item:hover {
+          background: var(--cms-hover, #eef2ff);
+          color: var(--cms-accent, #6366f1);
+        }
+
+        .cms-sidenav-item.active {
+          background: var(--cms-accent-light, #eef2ff);
+          color: var(--cms-accent, #6366f1);
+          font-weight: 600;
+        }
+
+        .cms-sidenav-icon {
+          font-size: 15px;
+          line-height: 1;
+          flex-shrink: 0;
+        }
+
+        .cms-sidenav-label {
+          white-space: nowrap;
+        }
+
+        .cms-sidenav-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          flex-shrink: 0;
+          margin-left: 4px;
+        }
+
+        /* ── Main panel ── */
+        .cms-panel {
+          flex: 1;
+          min-width: 0;
+          padding: 24px;
+          overflow-y: auto;
+        }
+
+        /* ── Small screens ── */
+        @media (max-width: 640px) {
+          .cms-sidenav-item { padding: 7px 10px; }
+          .cms-panel { padding: 16px; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -8,7 +8,7 @@
 
 import { useState } from "react";
 import { Input, Textarea, HeadingSelect, Toggle, VisBadge, Divider } from "../ui/UI.jsx";
-import ImagePicker from "./ImagePicker.jsx";
+import {  ImagePicker } from "@/components/ui/FormComponents";
 import LinkableTextarea from "../ui/Linkabletextarea.jsx";
 import IconPicker from "../ui/IconPicker.jsx";
 
@@ -48,6 +48,7 @@ export function HeroSection({ data, onChange, imgFieldName = "heroImage" }) {
         value={data.image || {}}
         onChange={v => s("image", v)}
         fieldName={imgFieldName}
+       uploadEndpoint="api/upload/image"
       />
     </div>
   );
@@ -176,7 +177,7 @@ export function ImageTextSection({ data, onChange, imgFieldName = "sectionImage"
       <Textarea label="Paragraph" limit={paragraphLimit} rows={5} value={data.paragraph || ""}
         onChange={e => s("paragraph", e.target.value)} placeholder="Tell your story here..." />
       <Divider label="Section Image" />
-      <ImagePicker value={data.image || {}} onChange={v => s("image", v)} fieldName={imgFieldName} />
+      <ImagePicker value={data.image || {}} onChange={v => s("image", v)} fieldName={imgFieldName} uploadEndpoint="api/upload/image" />
     </div>
   );
 }
@@ -255,7 +256,7 @@ export function SeoSection({ data, onChange, siteUrl = "" }) {
           checked={data.follow !== false} onChange={v => s("follow", v)} />
       </div>
       <Divider label="OG / Social Image" />
-      <ImagePicker label="Open Graph Image" value={data.image || {}} onChange={v => s("image", v)} fieldName="seoImage" />
+      <ImagePicker label="Open Graph Image" value={data.image || {}} onChange={v => s("image", v)} fieldName="seoImage" uploadEndpoint="api/upload/image" />
     </div>
   );
 }

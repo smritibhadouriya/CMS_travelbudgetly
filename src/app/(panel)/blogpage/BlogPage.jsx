@@ -15,20 +15,38 @@ const appendImg = (fd, k, img) => { if (img?.file instanceof File) fd.append(k, 
 
 const blankSeo = () => ({ metaTitle:"", metaDescription:"", metaKeywords:[], canonicalUrl:"", index:true, follow:true, image:mapImg() });
 
-export default function BlogPageAdmin() {
-  const [tab, setTab] = useState("content");
+/* ─── Tab definitions ─── */
+const TABS = [
+  { id: "hero",    label: "Hero",    icon: "✈️" },
+  { id: "connect", label: "Connect", icon: "💬" },
+  { id: "seo",     label: "SEO",     icon: "🔍" },
+];
 
-  const [heroHeading,    setheroHeading]    = useState("");
-  const [heroSubheading, setheroSubheading] = useState("");
-  const [connectHeading, setconnectHeading] = useState("");
-  const [connectSubtext, setconnectSubtext] = useState("");
-  const [seo,            setseo]            = useState(blankSeo());
+export default function BlogPageAdmin({ initialData = {} }) {
+  const d = initialData || {};
+  const [tab, setTab] = useState("hero");
+
+  /* ── state ── */
+  const [heroHeading,    setHeroHeading]    = useState(d.heroHeading || "");
+  const [heroSubheading, setHeroSubheading] = useState(d.heroSubheading || "");
+  const [connectHeading, setConnectHeading] = useState(d.connectHeading || "");
+  const [connectSubtext, setConnectSubtext] = useState(d.connectSubtext || "");
+  const [seo,            setSeo]            = useState({
+    metaTitle:        d.seo?.metaTitle || "",
+    metaDescription:  d.seo?.metaDescription || "",
+    metaKeywords:     d.seo?.metaKeywords || [],
+    canonicalUrl:     d.seo?.canonicalUrl || "",
+    index:            d.seo?.index !== false,
+    follow:           d.seo?.follow !== false,
+    image:            mapImg(d.seo?.image),
+  });
 
   const [saving,  setSaving]  = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState(null);
   const inFlight = useRef(false);
 
+  /* ── load ── */
   const load = useCallback(async () => {
     let cancelled = false;
     setLoading(true); setLoadErr(null);
@@ -37,11 +55,11 @@ export default function BlogPageAdmin() {
       if (cancelled) return;
       const data = res.data?.data;
       if (data && Object.keys(data).length) {
-        setheroHeading(data.heroHeading || "");
-        setheroSubheading(data.heroSubheading || "");
-        setconnectHeading(data.connectHeading || "");
-        setconnectSubtext(data.connectSubtext || "");
-        setseo({
+        setHeroHeading(data.heroHeading || "");
+        setHeroSubheading(data.heroSubheading || "");
+        setConnectHeading(data.connectHeading || "");
+        setConnectSubtext(data.connectSubtext || "");
+        setSeo({
           metaTitle:        data.seo?.metaTitle || "",
           metaDescription:  data.seo?.metaDescription || "",
           metaKeywords:     data.seo?.metaKeywords || [],
@@ -61,6 +79,7 @@ export default function BlogPageAdmin() {
 
   useEffect(() => { load(); }, [load]);
 
+  /* ── save ── */
   const handleSave = async () => {
     if (inFlight.current || saving) return;
     inFlight.current = true; setSaving(true);
@@ -86,51 +105,179 @@ export default function BlogPageAdmin() {
     } finally { setSaving(false); inFlight.current = false; }
   };
 
-  if (loading) return <div className="cms-root"><div className="cms-loading"><div className="cms-spinner"/><p style={{color:"var(--cms-muted)",fontSize:13}}>Loading Blog page…</p></div></div>;
-  if (loadErr)  return <div className="cms-root"><div className="cms-error-state"><span style={{fontSize:36}}>⚠️</span><p style={{color:"#ef4444",fontWeight:600,fontSize:14}}>{loadErr}</p><button onClick={load} style={{padding:"8px 20px",background:"var(--cms-accent)",color:"#fff",borderRadius:10,border:"none",fontWeight:700,cursor:"pointer"}}>Retry</button></div></div>;
+  if (loading) return (
+    <div className="cms-root">
+      <div className="cms-loading">
+        <div className="cms-spinner"/>
+        <p style={{color:"var(--cms-muted)",fontSize:13}}>Loading Blog page…</p>
+      </div>
+    </div>
+  );
+  if (loadErr) return (
+    <div className="cms-root">
+      <div className="cms-error-state">
+        <span style={{fontSize:36}}>⚠️</span>
+        <p style={{color:"#ef4444",fontWeight:600,fontSize:14}}>{loadErr}</p>
+        <button onClick={load} style={{padding:"8px 20px",background:"var(--cms-accent)",color:"#fff",borderRadius:10,border:"none",fontWeight:700,cursor:"pointer"}}>Retry</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="cms-root">
-      {saving && <div className="cms-overlay"><div className="cms-overlay-box"><div className="cms-spinner"/><p style={{fontWeight:700,fontSize:16}}>Saving…</p></div></div>}
-
-      <div className="cms-page-header">
-        <div><p className="cms-page-title">Blog Page</p><p className="cms-page-sub">Hero · Connect · SEO</p></div>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div className="cms-tabs">
-            {[["content","✏️ Content"],["seo","🔍 SEO"]].map(([id,label]) => (
-              <button key={id} type="button" onClick={()=>setTab(id)} className={`cms-tab ${tab===id?"active":""}`}>{label}</button>
-            ))}
+      {saving && (
+        <div className="cms-overlay">
+          <div className="cms-overlay-box">
+            <div className="cms-spinner"/>
+            <p style={{fontWeight:700,fontSize:16}}>Saving…</p>
           </div>
-          <button type="button" onClick={handleSave} disabled={saving} className="cms-save-btn">
-            {saving ? <><div className="cms-spinner" style={{width:14,height:14,borderWidth:2}}/> Saving…</> : <><svg style={{width:14,height:14}} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4zM12 17v-6m-3 3h6"/></svg> Save Page</>}
-          </button>
+        </div>
+      )}
+
+      {/* ── Page Header ── */}
+      <div className="cms-page-header">
+        <div>
+          <p className="cms-page-title">Blog Page</p>
+          <p className="cms-page-sub">Hero · Connect · SEO</p>
+        </div>
+        <button type="button" onClick={handleSave} disabled={saving} className="cms-save-btn">
+          {saving
+            ? <><div className="cms-spinner" style={{width:14,height:14,borderWidth:2}}/> Saving…</>
+            : <><svg style={{width:14,height:14}} fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V7l-4-4zM12 17v-6m-3 3h6"/></svg> Save Page</>
+          }
+        </button>
+      </div>
+
+      {/* ── Sidebar + Content layout ── */}
+      <div className="cms-layout">
+        <nav className="cms-sidenav">
+          {TABS.map(({ id, label, icon }) => {
+            const isActive = tab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                className={`cms-sidenav-item ${isActive ? "active" : ""}`}
+              >
+                <span className="cms-sidenav-icon">{icon}</span>
+                <span className="cms-sidenav-label">{label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* ── Main Panel ── */}
+        <div className="cms-panel">
+          {tab === "hero" && (
+            <SectionCard icon="✈️" title="Hero">
+              <Input label="Hero Heading" limit={12} value={heroHeading} onChange={e=>setHeroHeading(e.target.value)} placeholder="Travel Stories & Tips" />
+              <Textarea label="Hero Subheading" limit={40} rows={3} value={heroSubheading} onChange={e=>setHeroSubheading(e.target.value)} placeholder="Discover guides, hacks and inspiration for budget-friendly travel…" />
+            </SectionCard>
+          )}
+
+          {tab === "connect" && (
+            <SectionCard icon="💬" title="Connect Section">
+              <Input label="Connect Heading" limit={12} value={connectHeading} onChange={e=>setConnectHeading(e.target.value)} placeholder="Still Confused?" />
+              <Textarea label="Connect Subtext" limit={60} rows={4} value={connectSubtext} onChange={e=>setConnectSubtext(e.target.value)} placeholder="Reach out and let our travel experts help you plan your next trip…" />
+            </SectionCard>
+          )}
+
+          {tab === "seo" && (
+            <SeoSection data={seo} onChange={setSeo} siteUrl="https://www.TravelBudgetly.com" />
+          )}
         </div>
       </div>
 
-      <div className="cms-content">
-        {tab === "seo" && <SeoSection data={seo} onChange={setseo} siteUrl="https://www.TravelBudgetly.com" />}
+      {/* ── Injected layout styles (mirror HomePageAdmin) ── */}
+      <style>{`
+        .cms-layout {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+          min-height: calc(100vh - 72px);
+        }
 
-        {tab === "content" && (
-          <>
-            <div className="cms-info-banner">
-              <svg style={{width:16,height:16,flexShrink:0}} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <span>Edit the public <strong>Blog</strong> listing page — hero text and the "Still Confused?" connect block.</span>
-            </div>
+        /* ── Horizontal tab bar ── */
+        .cms-sidenav {
+          width: 100%;
+          min-width: unset;
+          background: var(--cms-sidebar, #f8f9fb);
+          border-right: none;
+          border-bottom: 1px solid var(--cms-border, #e5e7eb);
+          padding: 8px 12px;
+          display: flex;
+          flex-direction: row;
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          gap: 4px;
+          position: sticky;
+          top: 0;
+          height: auto;
+          z-index: 10;
+        }
 
-            {/* HERO */}
-            <SectionCard icon="✈️" title="Hero">
-              <Input label="Hero Heading" limit={12} value={heroHeading} onChange={e=>setheroHeading(e.target.value)} placeholder="Travel Stories & Tips" />
-              <Textarea label="Hero Subheading" limit={40} rows={3} value={heroSubheading} onChange={e=>setheroSubheading(e.target.value)} placeholder="Discover guides, hacks and inspiration for budget-friendly travel…" />
-            </SectionCard>
+        .cms-sidenav::-webkit-scrollbar {
+          height: 4px;
+        }
+        .cms-sidenav::-webkit-scrollbar-thumb {
+          background: var(--cms-border, #e5e7eb);
+          border-radius: 4px;
+        }
 
-            {/* CONNECT */}
-            <SectionCard icon="💬" title="Connect Section" defaultOpen={false}>
-              <Input label="Connect Heading" limit={12} value={connectHeading} onChange={e=>setconnectHeading(e.target.value)} placeholder="Still Confused?" />
-              <Textarea label="Connect Subtext" limit={60} rows={4} value={connectSubtext} onChange={e=>setconnectSubtext(e.target.value)} placeholder="Reach out and let our travel experts help you plan your next trip…" />
-            </SectionCard>
-          </>
-        )}
-      </div>
+        .cms-sidenav-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          width: auto;
+          padding: 8px 14px;
+          border: none;
+          border-radius: 8px;
+          background: transparent;
+          color: var(--cms-text, #374151);
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          white-space: nowrap;
+          flex-shrink: 0;
+          transition: background 0.15s, color 0.15s;
+        }
+
+        .cms-sidenav-item:hover {
+          background: var(--cms-hover, #eef2ff);
+          color: var(--cms-accent, #6366f1);
+        }
+
+        .cms-sidenav-item.active {
+          background: var(--cms-accent-light, #eef2ff);
+          color: var(--cms-accent, #6366f1);
+          font-weight: 600;
+        }
+
+        .cms-sidenav-icon {
+          font-size: 15px;
+          line-height: 1;
+          flex-shrink: 0;
+        }
+
+        .cms-sidenav-label {
+          white-space: nowrap;
+        }
+
+        /* ── Main panel ── */
+        .cms-panel {
+          flex: 1;
+          min-width: 0;
+          padding: 24px;
+          overflow-y: auto;
+        }
+
+        /* ── Small screens ── */
+        @media (max-width: 640px) {
+          .cms-sidenav-item { padding: 7px 10px; }
+          .cms-panel { padding: 16px; }
+        }
+      `}</style>
     </div>
   );
 }

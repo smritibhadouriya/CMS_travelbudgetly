@@ -225,11 +225,11 @@ const ImagePickerModal = ({ onClose, onConfirm, initialUrl = "", uploadEndpoint 
     if (tab === "url" && urlInput) { onConfirm({ url: toAbsolute(urlInput) }); onClose(); return; }
 
     if (tab === "upload" && file) {
-      const endpoint = uploadEndpoint || `${BACKEND_URL}/upload`;
+      const endpoint = uploadEndpoint || `${BACKEND_URL}/upload/image`;
       setUploading(true);
       try {
         const formData = new FormData();
-        formData.append("imageFile", file);
+        formData.append("image", file);
         const res = await fetch(endpoint, { method: "POST", body: formData });
         const data = await res.json();
         const serverPath = data?.path || data?.url || data?.file?.path || data?.filename;

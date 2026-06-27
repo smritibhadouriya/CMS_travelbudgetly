@@ -397,7 +397,6 @@ model Package {
   images    String[] @default([])
   imageUrls String[] @default([])
 
-  // ✅ Pura itinerary ek JSON mein
   itinerary Json @default("[]")
 
   inclusions  String[] @default([])

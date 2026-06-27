@@ -292,6 +292,7 @@ export default function AddAuthorPage() {
             value={image}
             onChange={setImage}
             fieldName="imageFile"
+            uploadEndpoint="api/upload/image"
           />
           <p className="text-xs text-gray-400 mt-1">
             Recommended: square image, min 200×200px. Max 5 MB.

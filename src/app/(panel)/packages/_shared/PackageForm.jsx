@@ -295,7 +295,7 @@ export default function PackageForm() {
                 <span className="text-xs font-semibold text-gray-600">Image #{i + 1}</span>
                 <button type="button" onClick={() => removeGal(i)} className="text-red-400 hover:text-red-600 text-sm font-bold px-2 py-1 rounded-lg hover:bg-red-50">✕ Remove</button>
               </div>
-              <ImagePicker value={g} onChange={v => setGal(i, v)} fieldName="images" />
+              <ImagePicker value={g} onChange={v => setGal(i, v)} fieldName="images" uploadEndpoint="api/upload/image" />
             </div>
           ))}
           <button type="button" onClick={addGal} className="text-sm text-indigo-600 font-semibold hover:underline">+ Add image</button>
