@@ -369,53 +369,447 @@ model Offer {
   createdAt      DateTime  @default(now())
 }
 
+generator client {
+  provider = "prisma-client-js"
+}
 
-model Package {
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/* ─────────────────────────────────────────────
+   AUTH
+───────────────────────────────────────────── */
+
+model User {
   id        String   @id @default(uuid())
-  slug      String   @unique
-  title     String
-  location  String   @default("")
-  duration  String   @default("")
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/* ─────────────────────────────────────────────
+   GLOBAL SETTINGS / SEO
+───────────────────────────────────────────── */
+
+model Settings {
+  id                 String   @id @default(uuid())
+  slug               String   @unique @default("global")
+  siteName           String   @default("TravelBudgetly")
+  siteUrl            String   @default("https://www.TravelBudgetly.com")
+  defaultMeta        String   @default("")
+  logoUrl            String   @default("")
+  faviconUrl         String   @default("")
+  social             Json? // { twitter, instagram, linkedin, youtube, facebook }
+  robotsExtra        String   @default("")
+  sitemapExtraUrls   String[] @default([])
+  googleAnalyticsId  String   @default("")
+  googleTagManagerId String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+// Standalone Seo model (models/mainSeo.schema.js -> mongoose.model("Seo"))
+model Seo {
+  id                  String   @id @default(uuid())
+  metaTitle           String?
+  metaDescription     String?
+  metaKeywords        String[] @default([])
+  jsonSchema          Json?    @default("{}")
+  index               Boolean  @default(true)
+  follow              Boolean  @default(true)
+  canonicalUrl        String?
+  seoImage            Json? // { mode, src, alt, title }
+  forceLowercase      Boolean?
+  trailingSlash       Boolean?
+  stripParams         Boolean?
+  sitemapEnabled      Boolean?
+  sitemapPages        Boolean?
+  sitemapBlogs        Boolean?
+  sitemapOpenpositions Boolean?
+  robotsTxt           String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Redirect {
+  id       String  @id @default(uuid())
+  oldSlug  String
+  newSlug  String
+  pageType String?
+}
+
+/* ─────────────────────────────────────────────
+   PAGES (singletons, identified by slug)
+───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   HOME PAGE
+   Sections: Hero, FeaturedDestinations, WhyChooseUs,
+             PopularPackages, SeasonalTravel, LatestBlogs,
+             PlanTrip, Newsletter
+───────────────────────────────────────────── */
+
+model Home {
+  id   String @id @default(uuid())
+  slug String @unique @default("home")
+
+  /* ── Hero Section ──────────────────────────────────────────
+     HeroSection.jsx:
+     - Background image (responsive: mobile/tablet/desktop/laptop)
+     - Search bar with Location dropdown, Budget dropdown, Destination input
+  ────────────────────────────────────────────────────────── */
+  heroEnabled         Boolean @default(true)
+  heroImageMobile     String  @default("")
+  heroImageTablet     String  @default("")
+  heroImageDesktop    String  @default("")
+  heroImageLaptop     String  @default("")
 
 
-  allDestinations String   @default("")
-  destinations    Json     @default("[]")
+  /* ── Featured Destinations Section ────────────────────────
+     FeaturedDestinations.jsx:
+     - Section heading + watermark text
+     - Subtext below heading
+     - Destinations list managed via separate Destination model
+  ────────────────────────────────────────────────────────── */
+  destinationsEnabled       Boolean @default(true)
+  destinationsWatermark     String  @default("")
+  destinationsHeading       String  @default("")
+  destinationsSubtext       String  @default("")
 
-  price           Int      @default(0)
-  originalPrice   Int      @default(0)
-  discountPercent Int      @default(0)
-  currency        String   @default("INR")
+  specialOffersEnabled    Boolean  @default(true)
+  specialOffersHeading    String   @default("")
+
+    popularCitiesEnabled         Boolean @default(true)
+  popularCitiesHeading         String  @default("")
+  popularCitiesExploreLinkText String  @default("")
+
+  spritualpackage    Boolean  @default(true)
+  spritualpackageHeading    String   @default("")
+
+
+
+
+  /* ── Why Choose Us Section ─────────────────────────────────
+     WhyChooseUs.jsx:
+     - Section heading + watermark text
+     - Trust feature cards (title, desc, icon) via Json array
+     - Center image and two side images
+  ────────────────────────────────────────────────────────── */
+  whyChooseUsEnabled    Boolean @default(true)
+  whyChooseUsWatermark  String  @default("")
+  whyChooseUsHeading    String  @default("")
+  trustFeatures         Json    @default("[]")
+  whyChooseUsCenterImages String @default("[]")
+
+  /* ── Popular Packages Section ──────────────────────────────
+     PopularPackages.jsx:
+     - Section heading + watermark text + subtext
+     - Filter tabs (category list)
+     - Packages list managed via separate Package model
+     - "Explore" link text
+  ────────────────────────────────────────────────────────── */
+  packagesEnabled      Boolean  @default(true)
+  packagesWatermark    String   @default("")
+  packagesHeading      String   @default("")
+  packagesSubtext      String   @default("")
+  packagesExploreLinkText String @default("Explore")
+
+  /* ── Seasonal Travel Section ───────────────────────────────
+     SeasonalTravel.jsx:
+     - Section heading + watermark text + subtext
+     - Seasons list (label, image, id) via Json array
+  ────────────────────────────────────────────────────────── */
+  seasonalEnabled     Boolean @default(true)
+  seasonalWatermark   String  @default("")
+  seasonalHeading     String  @default("")
+  seasonalSubtext     String  @default("")
+  seasons             Json    @default("[]")
+
+  /* ── Latest Blogs Section ──────────────────────────────────
+     LatestBlogs.jsx:
+     - Section heading + watermark text
+     - Sub-heading ("Latest Blogs") + explore link text
+     - Blogs fetched dynamically, no static data here
+  ────────────────────────────────────────────────────────── */
+  blogsEnabled        Boolean @default(true)
+  blogsWatermark      String  @default("Travel Blogs")
+  blogsHeading        String  @default("Explore Travel Tips & Latest Trends")
+  blogsSubheading     String  @default("Latest Blogs")
+  blogsExploreLinkText String @default("Explore Blogs")
+
+
+  /* ── Newsletter Section ────────────────────────────────────
+     NewsLetter.jsx:
+     - Heading, subtext
+     - Email input placeholder
+     - Subscribe button text
+     - Footer note (unsubscribe text)
+  ────────────────────────────────────────────────────────── */
+  newsletterEnabled     Boolean @default(true)
+  newsletterHeading     String  @default("")
+  newsletterSubtext     String  @default("")
+
+  seo Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+/* ─────────────────────────────────────────────
+   ABOUT PAGE
+   UI: hero section, mission, journey + stats,
+       lets connect section, newsletter CTA
+───────────────────────────────────────────── */
+
+model About {
+  id   String @id @default(uuid())
+   slug String @unique @default("about")
+
+  // Hero section
+  heroHeading String @default("")
+  heroSubtext String @default("")
+  heroImage   Json?  // { mode, src, alt, title }
+
+  // Mission section
+  missionHeading String @default("")
+  missionText    String @default("")
+
+  // Journey section
+  journeyHeading String @default("")
+  journeyBody    String @default("") // supports multiline / markdown
+  journeyImage   Json?  // { mode, src, alt, title }
+
+  stats Json @default("[]")
+  seo Json? // { metaTitle, metaDescription, metaKeywords[], canonicalUrl, seoImage, index, follow }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/* ─────────────────────────────────────────────
+   BLOG LISTING PAGE (blogpage)
+   UI: hero heading, category pills, search bar,
+       "Still Confused?" connect section at bottom
+───────────────────────────────────────────── */
+
+model BlogPage {
+  id   String @id @default(uuid())
+  slug String @unique @default("blogpage")
+
+  // Hero / heading section
+  heroHeading    String @default("")
+  heroSubheading String @default("")
+
+  connectHeading    String @default("")
+  connectSubtext    String @default("")
+
+
+  seo Json? // { metaTitle, metaDescription, metaKeywords[], canonicalUrl, seoImage, index, follow }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/* ─────────────────────────────────────────────
+   PACKAGE LISTING PAGE (package_page)
+   UI: hero label + heading, packages grid,
+       newsletter CTA, travel blogs section
+───────────────────────────────────────────── */
+
+model PackagePage {
+  id   String @id @default(uuid())
+   slug String @unique @default("package_page")
+
+  // Hero section (above filter + grid)
+  heroLabel   String @default("")
+  heroHeading String @default("")
+  heroSubtext String @default("")
+
+  // Sidebar help block
+  helpText String @default("")
+
+  // Travel Blogs section heading
+  blogsHeading String @default("Travel Blogs")
+
+  seo Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/* ─────────────────────────────────────────────
+   BLOG / AUTHOR / COMMENT
+───────────────────────────────────────────── */
+
+model Author {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  email       String?  @unique
+  bio         String   @default("")
+  designation String   @default("")
+  image       Json? // { mode, src, alt, title }
+  socialLinks Json? // { facebook, twitter, linkedin, instagram, website }
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  blogs Blog[]
+}
+
+model Blog {
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  title         String
+  category      String   @default("")
+  content       String   @default("")
+  readtime      Int      @default(5)
+  destination   String   @default("") @map("Destination")
+  isPublished   Boolean  @default(false)
+  isFeatured    Boolean  @default(false)
+  order         Int      @default(0)
+  publishedDate DateTime @default(now())
+  updatedDate   DateTime @default(now())
+
+  tags String[] @default([])
+
+  authorId String?
+  author   Author? @relation(fields: [authorId], references: [id])
+
+  image       Json?
+  bannerImage Json?
+
+  applyUrl  String @default("")
+  applyText String @default("")
+
+  seo          Json?
+  layoutConfig Json?
+
+  views Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  comments Comment[]
+
+  @@index([category])
+  @@index([isPublished, publishedDate])
+  @@index([authorId])
+}
+
+model Comment {
+  id      String @id @default(uuid())
+  blogId  String
+  blog    Blog   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  name    String
+  email   String
+  message String
+  status  String @default("pending") // "pending" | "approved" | "rejected"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([blogId, status])
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
+/* ─────────────────────────────────────────────
+   FORMS / SUBSCRIPTIONS
+───────────────────────────────────────────── */
+model Newsletter {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+/* ─────────────────────────────────────────────
+   Offers
+───────────────────────────────────────────── */
+model Offer {
+  id             String    @id @default(uuid())
+  slug         String    @unique
+  banner       Json? // { mode, src, alt, title }
+  Heading String @default("")
+  Subtext String @default("")
+  isPublished   Boolean  @default(false)
+  createdAt      DateTime  @default(now())
+}
+
+/* ─────────────────────────────────────────────
+   PACKAGE
+   Source: package schema + filters doc.
+   - Location split into city/state/region/continent/country
+     (filters #1-3) while keeping legacy `location` string.
+   - `duration` kept as display string ("4N/5D"); `durationNights`
+     added as the parsed Int the range-slider filter (#8) needs.
+   - `tripType` (honeymoon/group/family/solo) added, separate
+     from `tags` which was already in use for something else.
+   - `theme` (Cruise/Beach/Adventure/Wildlife) added — no prior field.
+   - `category` added as the tier facet (Budget/Standard/Deluxe/
+     Premium/Luxury) per filter #7. Kept legacy `tourCategory`
+     as-is since it's likely already wired into existing code —
+     did NOT merge the two, see chat note on why.
+   - `features` ([{heading, content}]) and `faqs` ([{question,
+     answer}]) added — content sections the doc schemas but the
+     old model never captured.
+   - `allRoutes` added alongside existing `allDestinations`
+     (doc treats them as distinct fields).
+   - price / originalPrice / discountPercent / reviewCount were
+     already Int in the source schema — no change needed there,
+     that part of the doc's "mandatory backend fix" was already done.
+───────────────────────────────────────────── */
+model Package {
+  id      String @id @default(uuid())
+  slug    String @unique
+  title   String
+  summary String @default("")
+
+  location  String  @default("")
+  city      String  @default("")
+  state     String?
+  region    String  @default("")
+  continent String  @default("")
+  country   String  @default("")
+
+  duration       String @default("") // display, e.g. "4N/5D"
+  durationNights Int    @default(0)  // parsed nights, for range filter
+
+  all_destinations String @default("")
+  all_routes      String @default("")
+  destinations    Json   @default("[]")
+  package_url String @default("")
+
+  price           Int    @default(0)
+ original_price  Int    @default(0)
+  discount Int    @default(0)
+  currency        String @default("INR")
 
   badge        String[] @default([])
-  packageType  String   @default("")
-  tourCategory String   @default("")
-  difficulty   String   @default("")
+  package_type  String   @default("") // Domestic | International
+  type     String[] @default([]) // honeymoon, group, family, solo
+  theme        String[] @default([]) // Cruise, Beach, Adventure, Wildlife
+  category     String   @default("") // Budget, Standard, Deluxe, Premium, Luxury
 
   rating      Float @default(0)
-  reviewCount Int   @default(0)
+  reviews Int   @default(0)
 
   images    String[] @default([])
-  imageUrls String[] @default([])
+  image_urls String[] @default([])
 
   itinerary Json @default("[]")
+  features  Json @default("[]") // [{ heading, content }]
+  faqs      Json @default("[]") // [{ question, answer }]
 
-  inclusions  String[] @default([])
-  exclusions  String[] @default([])
+  inclusions String[] @default([])
+  exclusions String[] @default([])
 
-  mealsIncluded    Boolean @default(false)
-  hotelIncluded    Boolean @default(true)
-  transferIncluded Boolean @default(true)
-
-  externalUrl String @default("")
-  externalId  String @default("")
 
   isPublished    Boolean @default(false)
   isFeatured     Boolean @default(false)
-  isSpecialOffer Boolean @default(false)
-  isSpritual     Boolean @default(false)
-
-  tags String[] @default([])
-  order Int     @default(0)
 
   seo Json?
 
@@ -426,4 +820,7 @@ model Package {
   @@index([price])
   @@index([tourCategory])
   @@index([location])
+  @@index([country])
+  @@index([packageType])
+  @@index([category])
 }
